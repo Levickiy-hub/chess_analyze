@@ -1,0 +1,12 @@
+{
+  "games": 390,
+  "fenMismatch": 0,
+  "sanMismatch": 0,
+  "rawPgnMismatch": 0,
+  "rawWithHeaders": 0,
+  "bestWithPositiveLoss": 6457,
+  "mateCategories": {
+    "Неизвестно": 1584,
+    "Последний ход": 213
+  }
+}

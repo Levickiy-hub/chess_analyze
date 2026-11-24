@@ -1,0 +1,331 @@
+{
+  "method": "confirmed=I/N; potential=(I+U+0.5P+0.25(FO+BO))/N",
+  "modules": [
+    {
+      "section": "5.1",
+      "module": "Управление профилями Chess.com",
+      "total": 12,
+      "counts": {
+        "PARTIAL": 4,
+        "NOT_IMPLEMENTED": 8
+      },
+      "confirmed": 0.0,
+      "potential": 16.67
+    },
+    {
+      "section": "5.2",
+      "module": "Интеграция с Chess.com API",
+      "total": 24,
+      "counts": {
+        "NOT_IMPLEMENTED": 13,
+        "IMPLEMENTED_UNVERIFIED": 3,
+        "PARTIAL": 8
+      },
+      "confirmed": 0.0,
+      "potential": 29.17
+    },
+    {
+      "section": "5.3",
+      "module": "Хранение партий",
+      "total": 26,
+      "counts": {
+        "IMPLEMENTED": 16,
+        "PARTIAL": 7,
+        "NOT_IMPLEMENTED": 3
+      },
+      "confirmed": 61.54,
+      "potential": 75.0
+    },
+    {
+      "section": "5.4",
+      "module": "Обработка PGN и шахматных позиций",
+      "total": 16,
+      "counts": {
+        "IMPLEMENTED": 10,
+        "BROKEN": 3,
+        "PARTIAL": 3
+      },
+      "confirmed": 62.5,
+      "potential": 71.88
+    },
+    {
+      "section": "5.5",
+      "module": "Интеграция со Stockfish",
+      "total": 22,
+      "counts": {
+        "IMPLEMENTED": 10,
+        "NOT_IMPLEMENTED": 5,
+        "PARTIAL": 6,
+        "BROKEN": 1
+      },
+      "confirmed": 45.45,
+      "potential": 59.09
+    },
+    {
+      "section": "5.6",
+      "module": "Массовый анализ партий",
+      "total": 33,
+      "counts": {
+        "PARTIAL": 15,
+        "NOT_IMPLEMENTED": 14,
+        "UNKNOWN": 4
+      },
+      "confirmed": 0.0,
+      "potential": 22.73
+    },
+    {
+      "section": "5.7",
+      "module": "Хранение результатов анализа",
+      "total": 24,
+      "counts": {
+        "IMPLEMENTED": 6,
+        "PARTIAL": 4,
+        "BROKEN": 3,
+        "NOT_IMPLEMENTED": 11
+      },
+      "confirmed": 25.0,
+      "potential": 33.33
+    },
+    {
+      "section": "5.8",
+      "module": "Общая статистика",
+      "total": 28,
+      "counts": {
+        "IMPLEMENTED": 4,
+        "PARTIAL": 8,
+        "NOT_IMPLEMENTED": 16
+      },
+      "confirmed": 14.29,
+      "potential": 28.57
+    },
+    {
+      "section": "5.9",
+      "module": "Анализ рейтинга",
+      "total": 16,
+      "counts": {
+        "PARTIAL": 3,
+        "NOT_IMPLEMENTED": 13
+      },
+      "confirmed": 0.0,
+      "potential": 9.38
+    },
+    {
+      "section": "5.10",
+      "module": "Анализ игры белыми и чёрными",
+      "total": 12,
+      "counts": {
+        "PARTIAL": 4,
+        "NOT_IMPLEMENTED": 8
+      },
+      "confirmed": 0.0,
+      "potential": 16.67
+    },
+    {
+      "section": "5.11",
+      "module": "Анализ дебютов",
+      "total": 22,
+      "counts": {
+        "PARTIAL": 6,
+        "NOT_IMPLEMENTED": 16
+      },
+      "confirmed": 0.0,
+      "potential": 13.64
+    },
+    {
+      "section": "5.12",
+      "module": "Оценка качества ходов",
+      "total": 25,
+      "counts": {
+        "BROKEN": 9,
+        "NOT_IMPLEMENTED": 9,
+        "PARTIAL": 6,
+        "IMPLEMENTED_UNVERIFIED": 1
+      },
+      "confirmed": 0.0,
+      "potential": 16.0
+    },
+    {
+      "section": "5.13",
+      "module": "Анализ стадий партии",
+      "total": 18,
+      "counts": {
+        "BROKEN": 4,
+        "NOT_IMPLEMENTED": 14
+      },
+      "confirmed": 0.0,
+      "potential": 0.0
+    },
+    {
+      "section": "5.14",
+      "module": "Анализ реализации преимущества",
+      "total": 16,
+      "counts": {
+        "NOT_IMPLEMENTED": 16
+      },
+      "confirmed": 0.0,
+      "potential": 0.0
+    },
+    {
+      "section": "5.15",
+      "module": "Анализ тактических ошибок",
+      "total": 27,
+      "counts": {
+        "NOT_IMPLEMENTED": 27
+      },
+      "confirmed": 0.0,
+      "potential": 0.0
+    },
+    {
+      "section": "5.16",
+      "module": "Анализ позиционной игры",
+      "total": 22,
+      "counts": {
+        "NOT_IMPLEMENTED": 22
+      },
+      "confirmed": 0.0,
+      "potential": 0.0
+    },
+    {
+      "section": "5.17",
+      "module": "Анализ эндшпилей",
+      "total": 19,
+      "counts": {
+        "NOT_IMPLEMENTED": 19
+      },
+      "confirmed": 0.0,
+      "potential": 0.0
+    },
+    {
+      "section": "5.18",
+      "module": "Анализ управления временем",
+      "total": 17,
+      "counts": {
+        "PARTIAL": 1,
+        "NOT_IMPLEMENTED": 16
+      },
+      "confirmed": 0.0,
+      "potential": 2.94
+    },
+    {
+      "section": "5.19",
+      "module": "Анализ игровых сессий",
+      "total": 19,
+      "counts": {
+        "NOT_IMPLEMENTED": 19
+      },
+      "confirmed": 0.0,
+      "potential": 0.0
+    },
+    {
+      "section": "5.20",
+      "module": "Анализ соперников",
+      "total": 11,
+      "counts": {
+        "PARTIAL": 2,
+        "NOT_IMPLEMENTED": 9
+      },
+      "confirmed": 0.0,
+      "potential": 9.09
+    },
+    {
+      "section": "5.21",
+      "module": "Персональный профиль навыков",
+      "total": 18,
+      "counts": {
+        "NOT_IMPLEMENTED": 18
+      },
+      "confirmed": 0.0,
+      "potential": 0.0
+    },
+    {
+      "section": "5.22",
+      "module": "Персональные рекомендации",
+      "total": 13,
+      "counts": {
+        "NOT_IMPLEMENTED": 13
+      },
+      "confirmed": 0.0,
+      "potential": 0.0
+    },
+    {
+      "section": "5.23",
+      "module": "Генерация персональных шахматных задач",
+      "total": 17,
+      "counts": {
+        "NOT_IMPLEMENTED": 17
+      },
+      "confirmed": 0.0,
+      "potential": 0.0
+    },
+    {
+      "section": "6",
+      "module": "Пользовательский интерфейс",
+      "total": 35,
+      "counts": {
+        "BACKEND_ONLY": 3,
+        "PARTIAL": 11,
+        "NOT_IMPLEMENTED": 19,
+        "MOCK": 1,
+        "BROKEN": 1
+      },
+      "confirmed": 0.0,
+      "potential": 17.86
+    },
+    {
+      "section": "6.1",
+      "module": "Просмотр шахматной партии",
+      "total": 18,
+      "counts": {
+        "NOT_IMPLEMENTED": 13,
+        "IMPLEMENTED": 2,
+        "BROKEN": 2,
+        "BACKEND_ONLY": 1
+      },
+      "confirmed": 11.11,
+      "potential": 12.5
+    },
+    {
+      "section": "6.2",
+      "module": "Общие фильтры аналитики",
+      "total": 20,
+      "counts": {
+        "BACKEND_ONLY": 2,
+        "NOT_IMPLEMENTED": 18
+      },
+      "confirmed": 0.0,
+      "potential": 2.5
+    }
+  ],
+  "overall": {
+    "requirements": 530,
+    "confirmed": 9.06,
+    "potential": 18.4
+  },
+  "dimensions": {
+    "frontend": {
+      "requirements": 73,
+      "confirmed": 2.74,
+      "potential": 12.33
+    },
+    "backend": {
+      "requirements": 69,
+      "confirmed": 0.0,
+      "potential": 23.91
+    },
+    "data": {
+      "requirements": 50,
+      "confirmed": 44.0,
+      "potential": 55.0
+    },
+    "engine": {
+      "requirements": 120,
+      "confirmed": 21.67,
+      "potential": 36.67
+    },
+    "analytics": {
+      "requirements": 300,
+      "confirmed": 1.33,
+      "potential": 6.67
+    }
+  }
+}

@@ -1,0 +1,294 @@
+{
+  "date": "2026-11-24",
+  "checks": [
+    {
+      "name": "syntax",
+      "results": [
+        {
+          "file": "config.js",
+          "status": 0
+        },
+        {
+          "file": "index.js",
+          "status": 0
+        },
+        {
+          "file": "lib\\analyzer.js",
+          "status": 0
+        },
+        {
+          "file": "lib\\chess-api.js",
+          "status": 0
+        },
+        {
+          "file": "lib\\file-utils.js",
+          "status": 0
+        },
+        {
+          "file": "lib\\html-reporter.js",
+          "status": 0
+        },
+        {
+          "file": "lib\\stats.js",
+          "status": 0
+        },
+        {
+          "file": "lib\\stockfish-pool.js",
+          "status": 0
+        }
+      ]
+    },
+    {
+      "name": "dataset",
+      "rawGames": 390,
+      "savedGames": 390,
+      "badPGN": 0,
+      "mismatchedLengths": 0,
+      "plies": 30607,
+      "clocks": 29957,
+      "mateScores": 1797,
+      "positiveLosses": 16420,
+      "zeroLosses": 11772,
+      "storedACPL": "507.3",
+      "includingZeros": 295.4676149262202,
+      "rawBytes": 1516509,
+      "analysisBytes": 52061496,
+      "rawKeys": [
+        "url",
+        "pgn",
+        "time_control",
+        "end_time",
+        "rated",
+        "tcn",
+        "uuid",
+        "initial_setup",
+        "fen",
+        "time_class",
+        "rules",
+        "white",
+        "black",
+        "eco"
+      ],
+      "gameKeys": [
+        "gameIndex",
+        "headers",
+        "totalMoves",
+        "analysis",
+        "pgn",
+        "isWhite",
+        "opponentRating",
+        "playerRating",
+        "date"
+      ],
+      "moveKeys": [
+        "moveNumber",
+        "move",
+        "lan",
+        "fen",
+        "evaluation",
+        "bestMove",
+        "phase",
+        "loss",
+        "category"
+      ],
+      "rules": [
+        "chess"
+      ],
+      "timeClasses": [
+        "rapid",
+        "daily"
+      ],
+      "duplicateUUIDs": 0,
+      "hasIndex": true,
+      "recomputedSummaryMatches": true
+    },
+    {
+      "name": "score-normalization-repro",
+      "scores": [
+        "cp 100",
+        "cp -100",
+        "cp 100"
+      ],
+      "losses": [
+        200,
+        200,
+        null
+      ],
+      "expectedLossFirst": 0,
+      "actualLossFirst": 200
+    },
+    {
+      "name": "unknown-player",
+      "isWhite": false,
+      "expected": "reject unknown participant"
+    },
+    {
+      "name": "custom-FEN",
+      "error": null,
+      "expectedFEN": "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1",
+      "actualFEN": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "name": "chess-rules-castling",
+      "lastMove": "O-O",
+      "fen": "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 5 4",
+      "checkmate": false
+    },
+    {
+      "name": "chess-rules-enPassant",
+      "lastMove": "exd6",
+      "fen": "rnbqkbnr/1pp1pppp/p2P4/8/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 3",
+      "checkmate": false
+    },
+    {
+      "name": "chess-rules-mate",
+      "lastMove": "Qh4#",
+      "fen": "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3",
+      "checkmate": true
+    },
+    {
+      "name": "chess-rules-promotion",
+      "lastMove": "a8=Q+",
+      "fen": "Q6k/8/8/8/8/8/8/7K b - - 0 1",
+      "checkmate": false
+    },
+    {
+      "name": "summary-invalid-result",
+      "counts": {
+        "totalGames": 1,
+        "wins": 0,
+        "losses": 1,
+        "draws": 0,
+        "winRate": "0.0",
+        "winsWhite": 0,
+        "winsBlack": 0,
+        "drawsWhite": 0,
+        "drawsBlack": 0,
+        "lossesWhite": 1,
+        "lossesBlack": 0,
+        "maxPlayerRating": 0,
+        "maxOpponentRating": 0,
+        "strongestOpponent": null,
+        "avgRatingAll": "0",
+        "avgRatingWins": "0",
+        "avgRatingDraws": "0",
+        "avgRatingLosses": "0",
+        "bestWinStreak": 0,
+        "avgAccuracy": "33.3",
+        "minAccuracy": "33.3",
+        "maxAccuracy": "33.3",
+        "avgCentipawnLoss": "200.0",
+        "topOpenings": [
+          {
+            "moves": "e4 e5 Nf3",
+            "count": 1
+          }
+        ],
+        "topErrors": [
+          {
+            "gameIndex": 0,
+            "moveNumber": 1,
+            "move": "e4",
+            "loss": 200,
+            "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          {
+            "gameIndex": 0,
+            "moveNumber": 2,
+            "move": "e5",
+            "loss": 200,
+            "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          }
+        ],
+        "categoryCounts": {
+          "Ошибка": 2
+        }
+      },
+      "expectedLosses": 0
+    },
+    {
+      "name": "pool-close",
+      "terminateCalls": 0
+    },
+    {
+      "name": "API-success-mocked",
+      "archives": [
+        "test"
+      ],
+      "games": [
+        {
+          "pgn": "test"
+        }
+      ],
+      "calls": [
+        [
+          "https://api.chess.com/pub/player/Audit/games/archives"
+        ],
+        [
+          "https://example.invalid/month"
+        ]
+      ]
+    },
+    {
+      "name": "API-error-mocked",
+      "status": 404,
+      "error": "Ошибка архивов: 404"
+    },
+    {
+      "name": "API-error-mocked",
+      "status": 429,
+      "error": "Ошибка архивов: 429"
+    },
+    {
+      "name": "API-error-mocked",
+      "status": 503,
+      "error": "Ошибка архивов: 503"
+    },
+    {
+      "name": "HTML-in-memory",
+      "emptySVGHasNaN": true,
+      "unescapedHeader": true,
+      "emptyIndexLinkMismatch": true
+    },
+    {
+      "name": "engine-smoke",
+      "identity": [
+        "id name Stockfish 17.1 WASM Multithreaded",
+        "option name Threads type spin default 1 min 1 max 32",
+        "option name Hash type spin default 16 min 1 max 33554432"
+      ],
+      "result": {
+        "bestmove": "g1f3",
+        "lines": [
+          {
+            "pv": "g1f3 d7d5 d2d4",
+            "score": {
+              "type": "cp",
+              "value": 39
+            },
+            "depth": 4,
+            "nodes": 512,
+            "time": 8,
+            "nps": 64000
+          }
+        ],
+        "ponder": "d7d5"
+      },
+      "whiteAdvantage": {
+        "type": "cp",
+        "value": 577
+      },
+      "blackAdvantage": {
+        "type": "cp",
+        "value": 563
+      },
+      "elapsedMs": 18,
+      "limit": "one engine, Threads=1 Hash=16 depth=4, three positions"
+    },
+    {
+      "name": "source-unchanged",
+      "files": 795,
+      "changed": []
+    }
+  ]
+}

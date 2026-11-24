@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11161c">
+  <title>Ход за ходом · Персональная шахматная аналитика</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+  <aside class="sidebar"><a class="brand" href="#dashboard"><span class="brand-mark">♞</span><span>Ход за
+        ходом<small>ШАХМАТНАЯ АНАЛИТИКА</small></span></a>
+    <div class="nav-caption">ВАША ИГРА</div>
+    <nav id="navigation" aria-label="Разделы приложения"></nav>
+    <div class="sidebar-foot"><span class="live-dot"></span> Локальное приложение<small>Ваши партии остаются на
+        компьютере</small></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><button id="menu" class="icon-button" aria-label="Открыть меню">☰</button>
+      <div class="breadcrumb">Личная аналитика <span>/</span> <strong id="breadcrumb">Обзор</strong></div>
+      <div class="top-actions"><span id="job-status" class="subtle">Stockfish готов</span><label class="sr-only"
+          for="profile">Шахматный профиль</label><select id="profile"></select><button id="sync"
+          class="button secondary">Синхронизировать</button></div>
+    </header>
+    <main>
+      <div id="page-head"></div>
+      <form id="filters" class="filters" aria-label="Фильтры аналитики"></form>
+      <div id="coverage"></div>
+      <div id="content" aria-live="polite">
+        <div class="loading">Восстанавливаем вашу шахматную историю…</div>
+      </div>
+    </main>
+    <footer class="app-footer">Ход за ходом <span>Персональные данные. Прозрачные формулы. Реальные партии.</span><a
+        href="#settings">Методика и настройки</a></footer>
+  </div>
+  <div id="toast" role="status"></div>
+  <dialog id="modal"><button id="close-modal" class="icon-button" aria-label="Закрыть">×</button>
+    <div id="modal-content"></div>
+  </dialog>
+  <script type="module" src="/app.js"></script>
+</body>
+
+</html>

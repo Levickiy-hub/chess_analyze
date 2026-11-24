@@ -1,0 +1,22 @@
+{
+  "name": "stockfish",
+  "version": "2.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "node --test test/*.test.mjs",
+    "test:engine": "node --test test/engine.smoke.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Локальная персональная шахматная аналитика Chess.com и Stockfish",
+  "engines": { "node": ">=24.0.0" },
+  "dependencies": {
+    "@se-oss/stockfish": "^1.0.1",
+    "chess.js": "^1.4.0"
+  }
+}

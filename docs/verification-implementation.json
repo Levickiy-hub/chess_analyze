@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-24",
+  "syntax_modules": 10,
+  "tests": {
+    "unit_http_persistence": {
+      "passed": 17,
+      "failed": 0
+    },
+    "real_engine": {
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "live_chesscom": {
+    "profile": true,
+    "stats": true,
+    "archive_count": 7
+  },
+  "bounded_worker_validation": {
+    "games": 1,
+    "plies": 8,
+    "puzzle_candidates": 10,
+    "accepted_puzzles": 6
+  },
+  "dataset": {
+    "games": 390,
+    "historical_analyses": 390,
+    "new_analyses": 1,
+    "user_attempts": 0
+  },
+  "browser_verified": [
+    "dashboard",
+    "game list",
+    "color filter",
+    "game review",
+    "next move",
+    "flip",
+    "alternative e5",
+    "training puzzle",
+    "hint",
+    "six quality categories"
+  ],
+  "not_executed": [
+    "bulk Stockfish analysis",
+    "100k load benchmark",
+    "full historical API download"
+  ],
+  "original_files_preserved": true
+}
