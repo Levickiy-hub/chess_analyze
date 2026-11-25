@@ -10,6 +10,8 @@ import { JobRunner } from './jobs.mjs';
 import { analytics, selectGames } from './analytics.mjs';
 import { username } from './domain.mjs';
 import { UciEngine, PRESETS } from './engine.mjs';
+import { GAME_SORT_KEYS, gameListRow, sortGameRows } from './game-list.mjs';
+import { coachReport, explainMove } from './coach.mjs';
 
 export const ROOT=path.resolve(fileURLToPath(new URL('..',import.meta.url)));
 const MIME={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.svg':'image/svg+xml'};
@@ -45,16 +47,29 @@ export function createApplication({filename=path.join(ROOT,'data','chess.sqlite'
       }
       const profile=query.profile??store.profiles()[0]?.username;
       if(route.startsWith('/api/')&&!['/api/position'].includes(route)&&(!profile||!store.profile(profile)))throw new Error('Добавьте шахматный профиль.');
+      if(route==='/api/coach'&&req.method==='GET'){
+        store.refresh();
+        const key='coach:'+store.revision+':'+url.searchParams.toString();
+        if(!reportCache.has(key)){if(reportCache.size>8)reportCache.clear();reportCache.set(key,coachReport(selectGames(store,profile,query),query));}
+        json(res,200,reportCache.get(key));return;
+      }
+      const explanationMatch=/^\/api\/games\/([^/]+)\/explanation$/.exec(route);
+      if(explanationMatch&&req.method==='GET'){
+        const game=store.game(decodeURIComponent(explanationMatch[1]));
+        if(!game||game.profile!==profile){json(res,404,{error:'Партия не найдена.'});return;}
+        const ply=Number(query.ply);if(!Number.isInteger(ply)||ply<1||ply>game.plies)throw new Error('Выберите существующий ход партии.');
+        json(res,200,explainMove(game,game.analysis,ply));return;
+      }
       if(route==='/api/analytics'&&req.method==='GET'){
         store.refresh();
         const key=store.revision+':'+url.searchParams.toString();if(!reportCache.has(key)){if(reportCache.size>8)reportCache.clear();reportCache.set(key,analytics(store,profile,query));}json(res,200,reportCache.get(key));return;
       }
       if(route==='/api/games'&&req.method==='GET'){
-        let {games,analyses}=selectGames(store,profile,query);games=[...games];
-        const sort=['date','rating','opponent','moves'].includes(query.sort)?query.sort:'date',direction=query.direction==='asc'?1:-1;
-        games.sort((a,b)=>direction*(sort==='opponent'?a.opponent.localeCompare(b.opponent):((sort==='rating'?a.rating:sort==='moves'?a.plies:a.end)??0)-((sort==='rating'?b.rating:sort==='moves'?b.plies:b.end)??0))||a.id.localeCompare(b.id));
+        const {games,analyses}=selectGames(store,profile,query);
+        const sort=GAME_SORT_KEYS.includes(query.sort)?query.sort:'date',direction=query.direction==='asc'?'asc':'desc';
+        const rows=sortGameRows(games.map(game=>gameListRow(game,analyses.get(game.id))),sort,direction);
         const page=Math.max(1,Number(query.page)||1),limit=Math.min(100,Math.max(10,Number(query.limit)||25));
-        json(res,200,{total:games.length,page,limit,games:games.slice((page-1)*limit,page*limit).map(g=>{const a=analyses.get(g.id),own=a?.moves.filter(m=>m.color===g.color&&m.accuracy!==null)??[];return {id:g.id,end:g.end,opponent:g.opponent,color:g.color,rating:g.rating,opponentRating:g.opponentRating,result:g.outcome,opening:g.opening,eco:g.eco,plies:g.plies,format:g.timeClass,control:g.timeControl,status:a?.source??'pending',accuracy:own.length?own.reduce((s,m)=>s+m.accuracy,0)/own.length:null};})});return;
+        json(res,200,{total:rows.length,page,limit,sort,direction,games:rows.slice((page-1)*limit,page*limit)});return;
       }
       const gameMatch=/^\/api\/games\/([^/]+)(?:\/(pgn|versions))?$/.exec(route);
       if(gameMatch&&req.method==='GET'){

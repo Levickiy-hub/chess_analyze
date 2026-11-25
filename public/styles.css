@@ -1512,6 +1512,25 @@ table {
     font-size: 14px
 }
 
+.coach-intro {display:flex;gap:24px;align-items:center;justify-content:space-between;margin-bottom:20px}
+.coach-intro p {max-width:720px}
+.coach-questions {margin:20px 0}
+.coach-pattern {padding:18px 0;border-bottom:1px solid var(--line)}
+.coach-pattern:last-child {border-bottom:0}
+.coach-links {display:flex;flex-wrap:wrap;gap:10px 20px;font-size:13px}
+.coach-plan {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.coach-day {padding:16px;border:1px solid var(--line);border-radius:10px}
+.coach-day label {display:flex;gap:10px;align-items:baseline;cursor:pointer}
+.coach-day input {accent-color:var(--accent)}
+.coach-day p,.coach-explanation {font-size:14px;line-height:1.7}
+.coach-example {padding:16px 0;border-bottom:1px solid var(--line)}
+.coach-example summary {cursor:pointer;font-weight:600}
+.coach-explanation li {margin-bottom:8px}
+.coach-export {width:100%;min-height:55vh;font:13px/1.6 monospace}
+#coach-plan,#coach-progress,#coach-patterns {scroll-margin-top:24px;margin-top:20px}
+#coach-examples {margin-top:20px;margin-bottom:20px}
+@media(max-width:850px) {.coach-intro {display:block}.coach-plan {grid-template-columns:1fr}}
+
 .puzzle-card:focus-visible {
     outline: 2px solid var(--accent)
-}
+}.table-sort-button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;white-space:nowrap}.table-sort-button:hover{color:var(--text)}th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--accent)}.sort-indicator{display:inline-flex;flex-direction:column;gap:3px;flex-shrink:0}.sort-indicator:before,.sort-indicator:after{content:"";width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent;opacity:.35}.sort-indicator:before{border-bottom:4px solid currentColor}.sort-indicator:after{border-top:4px solid currentColor}th[aria-sort="ascending"] .sort-indicator:before,th[aria-sort="descending"] .sort-indicator:after{opacity:1}th[aria-sort="ascending"] .sort-indicator:after,th[aria-sort="descending"] .sort-indicator:before{opacity:.15}

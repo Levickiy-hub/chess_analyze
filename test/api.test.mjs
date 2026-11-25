@@ -30,3 +30,23 @@ test('HTTP API: import, filter, isolation, settings validation, security',async(
   assert.equal((await call('/api/puzzles/p1/attempt?profile=another','POST',{moves:['e2e4']})).status,400);
  }finally{await app.close();}
 },{timeout:15000});
+
+test('game header sorts are applied globally before HTTP pagination',async()=>{
+ const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});
+ app.store.saveProfile('sort_tester');
+ for(let i=0;i<30;i++){
+  const pgn='[White "sort_tester"]\n[Black "opponent"]\n\n1. e4 e5 *';
+  const {game}=app.store.importGame({uuid:'sort-'+String(i).padStart(2,'0'),pgn,end_time:1000+i,white:{username:'sort_tester',rating:1000-i},black:{username:'opponent'},time_class:'rapid'},'sort_tester');
+  if(i<29)app.store.putAnalysis(game.id,{source:'verified',preset:'quick',createdAt:new Date().toISOString(),moves:[{color:'w',accuracy:i},{color:'b',accuracy:100}]});
+ }
+ await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
+ const base='http://127.0.0.1:'+app.server.address().port;
+ try{
+  const query=async extra=>(await fetch(base+'/api/games?profile=sort_tester&limit=10&'+extra,{signal:AbortSignal.timeout(5000)})).json();
+  const first=await query('sort=accuracy&direction=desc');assert.equal(first.games[0].accuracy,28);assert.equal(first.sort,'accuracy');
+  const second=await query('sort=accuracy&direction=desc&page=2');assert.equal(second.games[0].accuracy,18);
+  const third=await query('sort=accuracy&direction=desc&page=3');assert.equal(third.games.at(-1).accuracy,null);
+  const asc=await query('sort=rating&direction=asc');assert.equal(asc.games[0].rating,971);
+  const latest=await query('sort=date&direction=desc');assert.equal(latest.games[0].end,1029);
+ }finally{await app.close();}
+});
