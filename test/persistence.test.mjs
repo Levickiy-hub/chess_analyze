@@ -13,5 +13,5 @@ test('persistent jobs survive restart and cached reads see external SQLite commi
   const r=b.importGame({pgn:'[White "tester"]\n[Black "other"]\n\n1. e4 e5 *'},'tester');assert.ok(r.game);assert.equal(a.games('tester').length,1);
   const job=a.createJob('analysis','tester',{gameIds:[r.game.id],index:0,done:0,errors:[]});a.updateJob(job.id,'running',job.data);a.close();a=null;b.close();b=null;
   a=new Store(file);const runner=new JobRunner(a);assert.equal(a.job(job.id).status,'queued');assert.deepEqual(a.job(job.id).data.gameIds,[r.game.id]);await runner.stop();
- }finally{a?.close();b?.close();for(const name of fs.readdirSync(dir))fs.unlinkSync(path.join(dir,name));fs.rmdirSync(dir);}
+ }finally{a?.close();b?.close();for(const name of fs.readdirSync(dir))fs.rmSync(path.join(dir,name),{force:true});fs.rmdirSync(dir);}
 });

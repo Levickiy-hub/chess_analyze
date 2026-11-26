@@ -1,7 +1,7 @@
 import { analyzeGame, UciEngine, PRESETS } from './engine.mjs';
 import { ChessCom } from './chesscom.mjs';
 import { randomUUID } from 'node:crypto';
-import { expectation } from './domain.mjs';
+import { puzzleCandidate } from './training.mjs';
 
 export class JobRunner {
   constructor(store){this.store=store;this.client=new ChessCom(store);this.active=null;this.stopping=false;this.timer=null;
@@ -12,7 +12,7 @@ export class JobRunner {
   enqueueAnalysis(profile,ids,{preset='quick',mode='pending'}={}){
     if(!PRESETS[preset])throw new Error('Неизвестный режим анализа.');
     const occupied=new Set(this.store.jobs(profile).filter(j=>['queued','running','paused'].includes(j.status)&&j.kind==='analysis').flatMap(j=>j.data.gameIds.slice(j.data.index??0)));
-    const selected=ids.filter(id=>{const g=this.store.game(id,false);if(!g||g.profile!==profile)return false;if(occupied.has(id))return false;const a=this.store.analysis(id,true);return mode==='all'||!a||a.preset!==preset;});
+    const selected=[...new Set(ids)].filter(id=>{const g=this.store.game(id,false);if(!g||g.profile!==profile)return false;if(occupied.has(id))return false;const a=this.store.analysis(id,true);return mode==='all'||!a||a.preset!==preset;});
     if(!selected.length)throw new Error('Нет новых партий для анализа в выбранном режиме; уже поставленные задания не дублируются.');
     const job=this.store.createJob('analysis',profile,{gameIds:selected,index:0,total:selected.length,done:0,failed:0,errors:[],preset,ply:0,plies:0});this.schedule();return job;
   }
@@ -72,10 +72,9 @@ export class JobRunner {
     try{for(const {game,move} of chosen){
       if(signal.aborted)throw new Error('Генерация остановлена.');
       const result=await engine.analyze(move.fen,{depth:18,movetime:1500,nodes:200000,multiPV:2,signal});
-      const best=result.lines[0],second=result.lines[1];
-      const gap=second?expectation(best.score,move.color)-expectation(second.score,move.color):1;
-      if(best?.pv.length&&result.bestMove!==move.uci&&gap>=.04&&best.depth>=8){
-        const id=randomUUID(),puzzle={id,gameId:game.id,ply:move.ply,fen:move.fen,color:move.color,solution:best.pv.slice(0,8),alternatives:[],motifs:move.motifs,difficulty:Math.min(5,Math.max(1,Math.ceil(best.pv.length/2))),engine:result.engine,depth:best.depth,score:best.score,gap,createdAt:new Date().toISOString()};
+      const candidate=puzzleCandidate(result,move);
+      if(candidate){
+        const id=randomUUID(),puzzle={id,gameId:game.id,ply:move.ply,fen:move.fen,color:move.color,...candidate,alternatives:[],motifs:move.motifs,engine:result.engine,createdAt:new Date().toISOString()};
         this.store.db.prepare('INSERT OR IGNORE INTO puzzles(id,game_id,profile,ply,data,due_at) VALUES(?,?,?,?,?,?)').run(id,game.id,job.profile,move.ply,JSON.stringify(puzzle),new Date().toISOString());
       }
       job.data.done++;this.progress(job);

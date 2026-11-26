@@ -4,7 +4,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { backup } from 'node:sqlite';
-import { Chess } from 'chess.js';
 import { Store } from './database.mjs';
 import { JobRunner } from './jobs.mjs';
 import { analytics, selectGames } from './analytics.mjs';
@@ -12,6 +11,8 @@ import { username } from './domain.mjs';
 import { UciEngine, PRESETS } from './engine.mjs';
 import { GAME_SORT_KEYS, gameListRow, sortGameRows } from './game-list.mjs';
 import { coachReport, explainMove } from './coach.mjs';
+import { nextPuzzleReview } from './training.mjs';
+import { positionRequest } from './position-request.mjs';
 
 export const ROOT=path.resolve(fileURLToPath(new URL('..',import.meta.url)));
 const MIME={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.svg':'image/svg+xml'};
@@ -95,22 +96,25 @@ export function createApplication({filename=path.join(ROOT,'data','chess.sqlite'
       const jobMatch=/^\/api\/jobs\/([^/]+)\/(pause|resume|cancel|retry)$/.exec(route);
       if(jobMatch&&req.method==='POST'){if(store.job(jobMatch[1])?.profile!==profile)throw new Error('Задание не найдено.');json(res,200,runner.action(jobMatch[1],jobMatch[2]));return;}
       if(route==='/api/position'&&req.method==='POST'){
-        if(positionBusy){json(res,429,{error:'Дождитесь текущего анализа позиции.'});return;}const input=await body(req),board=new Chess(input.fen);positionBusy=true;positionEngine=new UciEngine({hash:store.settings().hash});
-        try{json(res,200,await positionEngine.analyze(board.fen(),{...(PRESETS[input.preset]??PRESETS.standard),multiPV:3}));}finally{positionEngine.close();positionEngine=null;positionBusy=false;}return;
+        if(positionBusy){json(res,429,{error:'Дождитесь текущего анализа позиции.'});return;}const input=await body(req),position=positionRequest(input),controller=new AbortController();positionBusy=true;positionEngine=new UciEngine({hash:store.settings().hash});
+        const disconnect=()=>{if(!res.writableEnded)controller.abort();};res.on('close',disconnect);
+        try{const {fen,...history}=position;const result=await positionEngine.analyze(fen,{...history,...(PRESETS[input.preset]??PRESETS.standard),multiPV:3,signal:controller.signal});if(!res.destroyed)json(res,200,result);}finally{res.removeListener('close',disconnect);positionEngine.close();positionEngine=null;positionBusy=false;}return;
       }
       if(route==='/api/puzzles'&&req.method==='GET'){
         const rows=store.db.prepare(`SELECT id,data,due_at,interval_days FROM puzzles WHERE profile=? ORDER BY due_at LIMIT 100`).all(profile);
-        json(res,200,{puzzles:rows.map(r=>{const p=JSON.parse(r.data);delete p.solution;delete p.alternatives;return {...p,dueAt:r.due_at,interval:r.interval_days};}),attempts:store.db.prepare('SELECT count(*) n,sum(correct) correct FROM attempts a JOIN puzzles p ON p.id=a.puzzle_id WHERE p.profile=?').get(profile)});return;
+        json(res,200,{total:store.db.prepare('SELECT count(*) n FROM puzzles WHERE profile=?').get(profile).n,puzzles:rows.map(r=>{const p=JSON.parse(r.data);p.playerMoves=Math.ceil(p.solution.length/2);delete p.solution;delete p.alternatives;return {...p,dueAt:r.due_at,interval:r.interval_days};}),attempts:store.db.prepare('SELECT count(*) n,coalesce(sum(correct),0) correct,count(DISTINCT CASE WHEN correct=1 THEN puzzle_id END) solved FROM attempts a JOIN puzzles p ON p.id=a.puzzle_id WHERE p.profile=?').get(profile)});return;
       }
       const puzzleMatch=/^\/api\/puzzles\/([^/]+)\/(attempt|hint|solution)$/.exec(route);
       if(puzzleMatch&&req.method==='POST'){
         const row=store.db.prepare('SELECT * FROM puzzles WHERE id=? AND profile=?').get(puzzleMatch[1],profile);if(!row)throw new Error('Задача не найдена.');const puzzle=JSON.parse(row.data),input=await body(req);
-        if(puzzleMatch[2]==='hint'){const prefix=Array.isArray(input.moves)?input.moves:[];if(!prefix.every((m,i)=>m===puzzle.solution[i]))throw new Error('Неверное начало решения.');json(res,200,{from:puzzle.solution[Math.min(prefix.length,puzzle.solution.length-1)].slice(0,2),motifs:puzzle.motifs});return;}
+        if(puzzleMatch[2]==='hint'){const prefix=Array.isArray(input.moves)?input.moves:[];if(prefix.length>=puzzle.solution.length||prefix.length%2!==0||!prefix.every((m,i)=>m===puzzle.solution[i]))throw new Error('Неверное начало решения или решение уже завершено.');json(res,200,{from:puzzle.solution[prefix.length].slice(0,2),motifs:puzzle.motifs});return;}
         if(puzzleMatch[2]==='solution'){json(res,200,{solution:puzzle.solution});return;}
-        const moves=Array.isArray(input.moves)?input.moves:[],correct=moves.length>0&&moves.every((move,i)=>move===puzzle.solution[i]);
+        const moves=Array.isArray(input.moves)?input.moves:[];
+        if(!moves.length||moves.length%2!==1||moves.length>puzzle.solution.length||moves.some(m=>typeof m!=='string'))throw new Error('Попытка должна завершаться ходом решающего в пределах решения.');
+        const correct=moves.every((move,i)=>move===puzzle.solution[i]);
         if(!correct){store.db.prepare('INSERT INTO attempts VALUES(?,?,?,?,?)').run(randomUUID(),row.id,new Date().toISOString(),0,JSON.stringify({moves}));store.db.prepare('UPDATE puzzles SET due_at=?,interval_days=0 WHERE id=?').run(new Date(Date.now()+10*60000).toISOString(),row.id);json(res,200,{correct:false,complete:false});return;}
         const reply=puzzle.solution[moves.length]??null,next=[...moves,...(reply?[reply]:[])],complete=next.length>=puzzle.solution.length;
-        if(complete){const interval=row.interval_days?Math.min(90,row.interval_days*2):1;store.db.prepare('INSERT INTO attempts VALUES(?,?,?,?,?)').run(randomUUID(),row.id,new Date().toISOString(),1,JSON.stringify({moves}));store.db.prepare('UPDATE puzzles SET due_at=?,interval_days=? WHERE id=?').run(new Date(Date.now()+interval*86400000).toISOString(),interval,row.id);}
+        if(complete){const review=nextPuzzleReview(row.interval_days,row.due_at);store.db.prepare('INSERT INTO attempts VALUES(?,?,?,?,?)').run(randomUUID(),row.id,new Date().toISOString(),1,JSON.stringify({moves}));store.db.prepare('UPDATE puzzles SET due_at=?,interval_days=? WHERE id=?').run(review.dueAt,review.interval,row.id);}
         json(res,200,{correct:true,complete,reply,moves:next});return;
       }
       if(route.startsWith('/api/')){json(res,404,{error:'Метод API не найден.'});return;}

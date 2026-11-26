@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-11-26T09:17:36.790Z",
+  "profiles": [
+    {
+      "profile": "slavalevickiy",
+      "games": 1496,
+      "verified": 1496,
+      "recovered": 0,
+      "evaluated": 43531,
+      "accuracy": 89.72,
+      "acpl": 53.53,
+      "bestWinStreak": 11,
+      "sessionCount": 422,
+      "gradesChanged": 19995,
+      "forksRemoved": 208,
+      "invalidatedPositions": 0,
+      "checks": "passed"
+    },
+    {
+      "profile": "xumoza_www",
+      "games": 1008,
+      "verified": 1008,
+      "recovered": 0,
+      "evaluated": 22137,
+      "accuracy": 87.88,
+      "acpl": 70.01,
+      "bestWinStreak": 10,
+      "sessionCount": 274,
+      "gradesChanged": 10505,
+      "forksRemoved": 163,
+      "invalidatedPositions": 1,
+      "checks": "passed"
+    }
+  ]
+}

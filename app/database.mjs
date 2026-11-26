@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { normalizeGame, recoverLegacy } from './domain.mjs';
+import { normalizeGame, recoverLegacy, upgradeSavedGame, upgradeSavedAnalysis } from './domain.mjs';
 
 export const DEFAULT_SETTINGS={timezone:'Europe/Moscow',sessionGap:45,minSample:5,preset:'quick',autoAnalyze:false,includeRecovered:true,hash:32};
 export class Store {
@@ -47,11 +47,11 @@ export class Store {
       return {game,inserted:!old};
     }catch(error){this.db.prepare('INSERT INTO quarantine VALUES(?,?,?,?,?)').run(randomUUID(),name,error.message,JSON.stringify(raw),new Date().toISOString());return {error:error.message};}
   }
-  game(id,withAnalysis=true){const row=this.db.prepare('SELECT data FROM games WHERE id=?').get(id);if(!row)return null;const game=JSON.parse(row.data);if(withAnalysis)game.analysis=this.analysis(id);return game;}
-  analysis(id,verifiedOnly=false){const row=this.db.prepare(`SELECT data FROM analyses WHERE game_id=? ${verifiedOnly?"AND source='verified'":''} ORDER BY CASE source WHEN 'verified' THEN 0 ELSE 1 END,created_at DESC LIMIT 1`).get(id);return row?JSON.parse(row.data):null;}
+  game(id,withAnalysis=true){const row=this.db.prepare('SELECT data FROM games WHERE id=?').get(id);if(!row)return null;const game=upgradeSavedGame(JSON.parse(row.data));if(withAnalysis)game.analysis=this.analysis(id);return game;}
+  analysis(id,verifiedOnly=false){const row=this.db.prepare(`SELECT data FROM analyses WHERE game_id=? ${verifiedOnly?"AND source='verified'":''} ORDER BY CASE source WHEN 'verified' THEN 0 ELSE 1 END,created_at DESC LIMIT 1`).get(id);return row?upgradeSavedAnalysis(JSON.parse(row.data),this.game(id,false)):null;}
   putAnalysis(id,data){data.id??=randomUUID();this.db.prepare('INSERT INTO analyses(id,game_id,source,created_at,preset,data) VALUES(?,?,?,?,?,?)').run(data.id,id,data.source,data.createdAt,data.preset,JSON.stringify(data));this.analysisCache.clear();this.revision++;}
-  games(profile){this.refresh();if(!this.gameCache.has(profile))this.gameCache.set(profile,this.db.prepare('SELECT data FROM games WHERE profile=? ORDER BY end_time,id').all(profile).map(r=>JSON.parse(r.data)));return this.gameCache.get(profile);}
-  analyses(profile){this.refresh();if(!this.analysisCache.has(profile)){const rows=this.db.prepare(`SELECT a.game_id,a.data FROM analyses a JOIN games g ON g.id=a.game_id WHERE g.profile=? ORDER BY CASE a.source WHEN 'verified' THEN 1 ELSE 0 END,a.created_at`).all(profile);this.analysisCache.set(profile,new Map(rows.map(r=>[r.game_id,JSON.parse(r.data)])));}return this.analysisCache.get(profile);}
+  games(profile){this.refresh();if(!this.gameCache.has(profile))this.gameCache.set(profile,this.db.prepare('SELECT data FROM games WHERE profile=? ORDER BY end_time,id').all(profile).map(r=>upgradeSavedGame(JSON.parse(r.data))).sort((a,b)=>(a.end??-Infinity)-(b.end??-Infinity)||a.id.localeCompare(b.id)));return this.gameCache.get(profile);}
+  analyses(profile){this.refresh();if(!this.analysisCache.has(profile)){const rows=this.db.prepare(`SELECT a.game_id,a.data FROM analyses a JOIN games g ON g.id=a.game_id WHERE g.profile=? ORDER BY CASE a.source WHEN 'verified' THEN 1 ELSE 0 END,a.created_at`).all(profile),latest=new Map(rows.map(r=>[r.game_id,JSON.parse(r.data)])),games=new Map(this.games(profile).map(g=>[g.id,g]));this.analysisCache.set(profile,new Map([...latest].map(([id,a])=>[id,upgradeSavedAnalysis(a,games.get(id))])));}return this.analysisCache.get(profile);}
   job(id){const r=this.db.prepare('SELECT * FROM jobs WHERE id=?').get(id);return r?{...r,data:JSON.parse(r.data)}:null;}
   jobs(profile){return this.db.prepare('SELECT id FROM jobs WHERE profile=? ORDER BY created_at DESC LIMIT 50').all(profile).map(r=>this.job(r.id));}
   createJob(kind,profile,data){const id=randomUUID(),now=new Date().toISOString();this.db.prepare('INSERT INTO jobs VALUES(?,?,?,?,?,?,?)').run(id,kind,profile,'queued',now,now,JSON.stringify(data));return this.job(id);}

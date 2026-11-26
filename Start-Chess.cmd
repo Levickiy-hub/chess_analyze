@@ -8,5 +8,5 @@ if errorlevel 1 (
   exit /b 1
 )
 echo Starting personal chess analytics. Open http://127.0.0.1:3000 after the ready message.
-node index.js
+node --use-system-ca index.js
 if errorlevel 1 pause

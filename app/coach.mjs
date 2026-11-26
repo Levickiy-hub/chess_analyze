@@ -77,7 +77,7 @@ export function coachReport(selection, filter = {}) {
       if (size < Math.max(3,min)) continue;
       const summarize = group => {const moves=group.flatMap(x=>x.moves);return {games:group.length,moves:moves.length,errors:moves.filter(error).length,rate:round(100*moves.filter(error).length/moves.length)};};
       const previous=summarize(cohort.slice(-size*2,-size)),recent=summarize(cohort.slice(-size));
-      progress.push({format,source,previous,recent,change:round(recent.rate-previous.rate)});
+      progress.push({format,source,previous,recent,change:round(100*recent.errors/recent.moves-100*previous.errors/previous.moves)});
     }
   }
   const warnings = ['Советы сформированы локальными правилами по сохранённым оценкам. Геометрические признаки и статистические связи не устанавливают причину ошибки.'];

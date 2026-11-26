@@ -20,6 +20,10 @@ test('HTTP API: import, filter, isolation, settings validation, security',async(
   assert.equal((await call('/api/profiles','POST',{username:'another',sync:false})).status,201);
   assert.equal((await call('/api/games/'+encodeURIComponent(list.games[0].id)+'?profile=another')).status,404);
   assert.equal((await call('/api/analytics?profile=tester')).body.summary.unknown,1);
+  const initial='4k3/8/8/8/8/8/8/4K3 w - - 0 1',fen='4k3/8/8/8/8/8/8/5K2 b - - 1 1';
+  const position=await call('/api/position?profile=tester','POST',{fen,initialFen:initial,moves:['e1f1']});assert.equal(position.status,200);assert.equal(position.body.score.value,0);
+  assert.equal((await call('/api/position?profile=tester','POST',{fen,initialFen:initial,moves:[]})).status,400);
+  assert.equal((await call('/api/games/'+encodeURIComponent(list.games[0].id)+'?profile=tester')).body.analysis,null);
   const puzzle={id:'p1',fen:'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',color:'w',solution:['e2e4','e7e5','g1f3','b8c6'],alternatives:[],motifs:[]};
   app.store.db.prepare('INSERT INTO puzzles(id,game_id,profile,ply,data,due_at) VALUES(?,?,?,?,?,?)').run('p1',list.games[0].id,'tester',1,JSON.stringify(puzzle),new Date().toISOString());
   const puzzles=(await call('/api/puzzles?profile=tester')).body;assert.equal(puzzles.puzzles[0].solution,undefined);
@@ -27,6 +31,12 @@ test('HTTP API: import, filter, isolation, settings validation, security',async(
   const first=(await call('/api/puzzles/p1/attempt?profile=tester','POST',{moves:['e2e4']})).body;assert.equal(first.correct,true);assert.equal(first.complete,false);assert.equal(first.reply,'e7e5');
   const final=(await call('/api/puzzles/p1/attempt?profile=tester','POST',{moves:['e2e4','e7e5','g1f3']})).body;assert.equal(final.complete,true);
   assert.equal((await call('/api/puzzles?profile=tester')).body.attempts.correct,1);
+  const scheduled=app.store.db.prepare('SELECT interval_days,due_at FROM puzzles WHERE id=?').get('p1');
+  await call('/api/puzzles/p1/attempt?profile=tester','POST',{moves:['e2e4','e7e5','g1f3']});
+  assert.deepEqual(app.store.db.prepare('SELECT interval_days,due_at FROM puzzles WHERE id=?').get('p1'),scheduled);
+  const repeated=(await call('/api/puzzles?profile=tester')).body;assert.equal(repeated.attempts.solved,1);assert.equal(repeated.attempts.correct,2);assert.equal(repeated.total,1);
+  assert.equal((await call('/api/puzzles/p1/attempt?profile=tester','POST',{moves:['e2e4','e7e5']})).status,400);
+  assert.equal((await call('/api/puzzles/p1/hint?profile=tester','POST',{moves:['e2e4','e7e5','g1f3','b8c6']})).status,400);
   assert.equal((await call('/api/puzzles/p1/attempt?profile=another','POST',{moves:['e2e4']})).status,400);
  }finally{await app.close();}
 },{timeout:15000});
