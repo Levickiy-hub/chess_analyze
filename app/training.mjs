@@ -1,5 +1,20 @@
 import { Chess } from 'chess.js';
 import { expectation } from './domain.mjs';
+import { centipawnLoss } from './skill-profile.mjs';
+
+export function randomPuzzleCandidates(store,profile,random=Math.random){
+  const analyses=store.analyses(profile),existing=new Set(store.db.prepare('SELECT game_id,ply FROM puzzles WHERE profile=?').all(profile).map(p=>p.game_id+'|'+p.ply)),candidates=[];
+  for(const game of store.games(profile)){
+    const analysis=analyses.get(game.id);if(analysis?.source!=='verified')continue;
+    for(const move of analysis.moves){
+      const value=move.before?.kind==='cp'&&!move.before.bound?move.before.value*(move.color==='w'?1:-1):null,loss=centipawnLoss(move);
+      if(move.color!==game.color||value===null||Math.abs(value)>500||loss===null||loss<150||existing.has(game.id+'|'+move.ply))continue;
+      candidates.push({game,move,loss});
+    }
+  }
+  for(let i=candidates.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
+  return candidates.slice(0,30);
+}
 
 export function puzzleCandidate(result,move) {
   const best=result.lines?.[0],second=result.lines?.[1];

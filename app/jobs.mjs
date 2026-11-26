@@ -1,7 +1,8 @@
+import { currentCycle, learningCandidates } from './learning.mjs';
 import { analyzeGame, UciEngine, PRESETS } from './engine.mjs';
 import { ChessCom } from './chesscom.mjs';
 import { randomUUID } from 'node:crypto';
-import { puzzleCandidate } from './training.mjs';
+import { puzzleCandidate, randomPuzzleCandidates } from './training.mjs';
 
 export class JobRunner {
   constructor(store){this.store=store;this.client=new ChessCom(store);this.active=null;this.stopping=false;this.timer=null;
@@ -17,7 +18,12 @@ export class JobRunner {
     const job=this.store.createJob('analysis',profile,{gameIds:selected,index:0,total:selected.length,done:0,failed:0,errors:[],preset,ply:0,plies:0});this.schedule();return job;
   }
   enqueueSync(profile){const existing=this.store.jobs(profile).find(j=>j.kind==='sync'&&['running','queued','paused'].includes(j.status));if(existing)return existing;const job=this.store.createJob('sync',profile,{archiveIndex:0,total:0,done:0,imported:0,failed:0,errors:[]});this.schedule();return job;}
-  enqueuePuzzles(profile){const old=this.store.jobs(profile).find(j=>j.kind==='puzzles'&&['running','queued'].includes(j.status));if(old)return old;const job=this.store.createJob('puzzles',profile,{done:0,total:10,failed:0,errors:[]});this.schedule();return job;}
+  enqueuePuzzles(profile,{mode='cycle'}={}){
+    if(!['cycle','random'].includes(mode))throw new Error('Неизвестный режим задач.');
+    const cycle=mode==='cycle'?currentCycle(this.store,profile):null;
+    const old=this.store.jobs(profile).find(j=>j.kind==='puzzles'&&['running','queued'].includes(j.status)&&(j.data.mode??'cycle')===mode&&j.data.cycleId===(cycle?.id??null));if(old)return old;
+    const job=this.store.createJob('puzzles',profile,{done:0,total:0,created:0,failed:0,errors:[],mode,cycleId:cycle?.id??null,format:cycle?.format??(mode==='random'?null:'rapid'),focus:mode==='random'?'random':cycle?.focus??'safety'});this.schedule();return job;
+  }
   action(id,action){const job=this.store.job(id);if(!job)throw new Error('Задание не найдено.');
     if(action==='pause'&&['queued','running'].includes(job.status)){this.store.updateJob(id,'paused',job.data);if(this.active?.id===id)this.active.controller.abort();}
     else if(action==='resume'&&['paused','failed','interrupted'].includes(job.status)){this.store.updateJob(id,'queued',job.data);this.schedule();}
@@ -50,6 +56,11 @@ export class JobRunner {
       // Index is committed with the per-game result. Position cache checkpoints survive an interrupted game.
       const index=job.data.index;job.data.index++;this.progress(job);job.data.index=index;
     }
+    const cycle=currentCycle(this.store,job.profile);
+    if(cycle&&!signal.aborted){
+      const ready=this.store.db.prepare('SELECT data,due_at FROM puzzles WHERE profile=?').all(job.profile).filter(row=>{const p=JSON.parse(row.data);return p.format===cycle.format&&p.focus===cycle.focus&&Date.parse(row.due_at)<=Date.now();}).length;
+      if(ready<3)this.enqueuePuzzles(job.profile);
+    }
   }
   async sync(job,signal){
     if(!job.data.archives){const details=await this.client.profile(job.profile,signal);this.store.saveProfile(job.profile,{...details,local:false});job.data.archives=await this.client.archives(job.profile,signal);job.data.total=job.data.archives.length;this.progress(job);}
@@ -62,23 +73,20 @@ export class JobRunner {
     if(this.store.settings().autoAnalyze){const pending=this.store.games(job.profile).filter(g=>!this.store.analysis(g.id,true)).map(g=>g.id);if(pending.length)this.enqueueAnalysis(job.profile,pending,{preset:this.store.settings().preset});}
   }
   async puzzles(job,signal){
-    const analyses=this.store.analyses(job.profile),candidates=[];
-    for(const game of this.store.games(job.profile)){
-      const analysis=analyses.get(game.id);if(!analysis)continue;
-      for(const move of analysis.moves)if(move.color===game.color&&['mistake','blunder'].includes(move.category)&&!this.store.db.prepare('SELECT id FROM puzzles WHERE game_id=? AND ply=?').get(game.id,move.ply))candidates.push({game,move});
-    }
-    candidates.sort((a,b)=>(b.move.probabilityLoss??0)-(a.move.probabilityLoss??0));
-    const chosen=candidates.slice(0,10);job.data.total=chosen.length;const engine=new UciEngine({hash:this.store.settings().hash});
-    try{for(const {game,move} of chosen){
+    const cycle={id:job.data.cycleId,format:job.data.format??'rapid',focus:job.data.focus??'safety'};
+    const randomMode=job.data.mode==='random',chosen=randomMode?randomPuzzleCandidates(this.store,job.profile):learningCandidates(this.store,job.profile,cycle);job.data.total=chosen.length;job.data.created??=0;
+    const engine=new UciEngine({hash:this.store.settings().hash});
+    try{for(const {game,move,loss} of chosen){
       if(signal.aborted)throw new Error('Генерация остановлена.');
-      const result=await engine.analyze(move.fen,{depth:18,movetime:1500,nodes:200000,multiPV:2,signal});
+      if(job.data.created>=5)break;
+      const result=await engine.analyze(move.fen,{depth:18,movetime:1500,nodes:200000,multiPV:2,initialFen:game.initialFen,moves:game.moves.slice(0,move.ply-1).map(m=>m.uci),signal});
       const candidate=puzzleCandidate(result,move);
       if(candidate){
-        const id=randomUUID(),puzzle={id,gameId:game.id,ply:move.ply,fen:move.fen,color:move.color,...candidate,alternatives:[],motifs:move.motifs,engine:result.engine,createdAt:new Date().toISOString()};
-        this.store.db.prepare('INSERT OR IGNORE INTO puzzles(id,game_id,profile,ply,data,due_at) VALUES(?,?,?,?,?,?)').run(id,game.id,job.profile,move.ply,JSON.stringify(puzzle),new Date().toISOString());
+        const id=randomUUID(),puzzle={id,gameId:game.id,ply:move.ply,fen:move.fen,color:move.color,...candidate,solution:candidate.solution.slice(0,2),fullLine:candidate.solution,playerMoves:1,mode:'critical-move',format:game.timeClass,focus:cycle.focus,pool:randomMode?'random':'cycle',cycleId:cycle.id,mistake:{played:move.san,reply:game.moves[move.ply]?.san??null,loss},reason:cycle.focus==='conversion'?'Сохраните перевес: проверьте контригру и сильнейший ответ соперника.':'Перед своим ходом проверьте шахи, взятия и угрозы соперника.',alternatives:[],motifs:move.motifs,engine:result.engine,createdAt:new Date().toISOString()};
+        this.store.db.prepare('INSERT OR IGNORE INTO puzzles(id,game_id,profile,ply,data,due_at) VALUES(?,?,?,?,?,?)').run(id,game.id,job.profile,move.ply,JSON.stringify(puzzle),new Date().toISOString());job.data.created++;
       }
       job.data.done++;this.progress(job);
-    }}finally{engine.close();}
+    }job.data.total=job.data.done;if(!job.data.created)job.data.note=chosen.length?'Stockfish не подтвердил достаточно однозначного лучшего хода. Такие позиции не выдаются как задачи с единственным ответом.':randomMode?'Подходящих новых позиций пока нет. Загрузите и проанализируйте новые партии, чтобы пополнить случайный набор.':'Подходящих новых позиций пока нет. Проанализируйте новые партии выбранного формата или выберите другое направление.';this.progress(job);}finally{engine.close();}
   }
   async stop(){this.stopping=true;clearTimeout(this.timer);this.active?.controller.abort();for(let i=0;this.active&&i<100;i++)await new Promise(r=>setTimeout(r,50));}
 }

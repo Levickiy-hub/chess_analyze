@@ -1,3 +1,6 @@
+import { openingTheory } from './opening-theory.mjs';
+import { startLearning, learningReport } from './learning.mjs';
+import { practiceAction, practiceDashboard, randomPracticePuzzle } from './practice.mjs';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,7 +14,6 @@ import { username } from './domain.mjs';
 import { UciEngine, PRESETS } from './engine.mjs';
 import { GAME_SORT_KEYS, gameListRow, sortGameRows } from './game-list.mjs';
 import { coachReport, explainMove } from './coach.mjs';
-import { nextPuzzleReview } from './training.mjs';
 import { positionRequest } from './position-request.mjs';
 
 export const ROOT=path.resolve(fileURLToPath(new URL('..',import.meta.url)));
@@ -77,7 +79,7 @@ export function createApplication({filename=path.join(ROOT,'data','chess.sqlite'
         const game=store.game(decodeURIComponent(gameMatch[1]));if(!game||game.profile!==profile){json(res,404,{error:'Партия не найдена.'});return;}
         if(gameMatch[2]==='pgn'){res.writeHead(200,{'Content-Type':'application/x-chess-pgn; charset=utf-8','Content-Disposition':'attachment; filename="game.pgn"'});res.end(game.pgn);}
         else if(gameMatch[2]==='versions')json(res,200,store.db.prepare('SELECT id,source,preset,created_at FROM analyses WHERE game_id=? ORDER BY created_at DESC').all(game.id));
-        else {delete game.raw;json(res,200,game);}return;
+        else {delete game.raw;game.theory=openingTheory(game);json(res,200,game);}return;
       }
       if(route==='/api/import'&&req.method==='POST'){
         const input=await body(req);if(typeof input.pgn!=='string')throw new Error('Нужен текст PGN.');const pgns=input.pgn.split(/\n\s*\n(?=\[Event )/).filter(x=>x.trim());let imported=0;const errors=[];
@@ -87,7 +89,7 @@ export function createApplication({filename=path.join(ROOT,'data','chess.sqlite'
       if(route==='/api/jobs'&&req.method==='POST'){
         const input=await body(req);let job;
         if(input.kind==='sync')job=runner.enqueueSync(profile);
-        else if(input.kind==='puzzles')job=runner.enqueuePuzzles(profile);
+        else if(input.kind==='puzzles')job=runner.enqueuePuzzles(profile,{mode:input.mode??'cycle'});
         else if(input.kind==='analysis'){
           const ids=Array.isArray(input.gameIds)?input.gameIds:selectGames(store,profile,query).games.map(g=>g.id);
           if(ids.length>100000)throw new Error('Не более 100 000 партий в задании.');job=runner.enqueueAnalysis(profile,ids,{preset:input.preset??store.settings().preset,mode:input.mode??'pending'});
@@ -100,22 +102,16 @@ export function createApplication({filename=path.join(ROOT,'data','chess.sqlite'
         const disconnect=()=>{if(!res.writableEnded)controller.abort();};res.on('close',disconnect);
         try{const {fen,...history}=position;const result=await positionEngine.analyze(fen,{...history,...(PRESETS[input.preset]??PRESETS.standard),multiPV:3,signal:controller.signal});if(!res.destroyed)json(res,200,result);}finally{res.removeListener('close',disconnect);positionEngine.close();positionEngine=null;positionBusy=false;}return;
       }
-      if(route==='/api/puzzles'&&req.method==='GET'){
-        const rows=store.db.prepare(`SELECT id,data,due_at,interval_days FROM puzzles WHERE profile=? ORDER BY due_at LIMIT 100`).all(profile);
-        json(res,200,{total:store.db.prepare('SELECT count(*) n FROM puzzles WHERE profile=?').get(profile).n,puzzles:rows.map(r=>{const p=JSON.parse(r.data);p.playerMoves=Math.ceil(p.solution.length/2);delete p.solution;delete p.alternatives;return {...p,dueAt:r.due_at,interval:r.interval_days};}),attempts:store.db.prepare('SELECT count(*) n,coalesce(sum(correct),0) correct,count(DISTINCT CASE WHEN correct=1 THEN puzzle_id END) solved FROM attempts a JOIN puzzles p ON p.id=a.puzzle_id WHERE p.profile=?').get(profile)});return;
+      if(route==='/api/learning'&&req.method==='GET'){json(res,200,learningReport(store,profile));return;}
+      if(route==='/api/learning/start'&&req.method==='POST'){
+        const input=await body(req),cycle=startLearning(store,profile,input),job=runner.enqueuePuzzles(profile);
+        json(res,201,{cycle,job});return;
       }
-      const puzzleMatch=/^\/api\/puzzles\/([^/]+)\/(attempt|hint|solution)$/.exec(route);
+      if(route==='/api/puzzles/random'&&req.method==='GET'){json(res,200,randomPracticePuzzle(store,profile,(query.exclude??'').split(',').filter(Boolean)));return;}
+      if(route==='/api/puzzles'&&req.method==='GET'){json(res,200,practiceDashboard(store,profile));return;}
+      const puzzleMatch=/^\/api\/puzzles\/([^/]+)\/(start|attempt|hint|solution|reset)$/.exec(route);
       if(puzzleMatch&&req.method==='POST'){
-        const row=store.db.prepare('SELECT * FROM puzzles WHERE id=? AND profile=?').get(puzzleMatch[1],profile);if(!row)throw new Error('Задача не найдена.');const puzzle=JSON.parse(row.data),input=await body(req);
-        if(puzzleMatch[2]==='hint'){const prefix=Array.isArray(input.moves)?input.moves:[];if(prefix.length>=puzzle.solution.length||prefix.length%2!==0||!prefix.every((m,i)=>m===puzzle.solution[i]))throw new Error('Неверное начало решения или решение уже завершено.');json(res,200,{from:puzzle.solution[prefix.length].slice(0,2),motifs:puzzle.motifs});return;}
-        if(puzzleMatch[2]==='solution'){json(res,200,{solution:puzzle.solution});return;}
-        const moves=Array.isArray(input.moves)?input.moves:[];
-        if(!moves.length||moves.length%2!==1||moves.length>puzzle.solution.length||moves.some(m=>typeof m!=='string'))throw new Error('Попытка должна завершаться ходом решающего в пределах решения.');
-        const correct=moves.every((move,i)=>move===puzzle.solution[i]);
-        if(!correct){store.db.prepare('INSERT INTO attempts VALUES(?,?,?,?,?)').run(randomUUID(),row.id,new Date().toISOString(),0,JSON.stringify({moves}));store.db.prepare('UPDATE puzzles SET due_at=?,interval_days=0 WHERE id=?').run(new Date(Date.now()+10*60000).toISOString(),row.id);json(res,200,{correct:false,complete:false});return;}
-        const reply=puzzle.solution[moves.length]??null,next=[...moves,...(reply?[reply]:[])],complete=next.length>=puzzle.solution.length;
-        if(complete){const review=nextPuzzleReview(row.interval_days,row.due_at);store.db.prepare('INSERT INTO attempts VALUES(?,?,?,?,?)').run(randomUUID(),row.id,new Date().toISOString(),1,JSON.stringify({moves}));store.db.prepare('UPDATE puzzles SET due_at=?,interval_days=? WHERE id=?').run(review.dueAt,review.interval,row.id);}
-        json(res,200,{correct:true,complete,reply,moves:next});return;
+        json(res,200,practiceAction(store,profile,puzzleMatch[1],puzzleMatch[2],await body(req)));return;
       }
       if(route.startsWith('/api/')){json(res,404,{error:'Метод API не найден.'});return;}
       if(req.method!=='GET'&&req.method!=='HEAD'){json(res,405,{error:'Метод не поддерживается.'});return;}

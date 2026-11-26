@@ -7,6 +7,20 @@ import { digest, whiteScore, finishAnalysis, isPrematureDraw } from './domain.mj
 export const PRESETS={quick:{depth:12,movetime:300,nodes:30000},standard:{depth:18,movetime:1500,nodes:200000},deep:{depth:24,movetime:5000,nodes:1000000}};
 export const specialSearchLimits=options=>({...options,depth:Math.max(14,options.depth),movetime:Math.max(1500,options.movetime),nodes:Math.max(300000,options.nodes)});
 const RESULT_VERSION='uci-exact-v1';
+const incompleteScore=result=>!result?.score||Boolean(result.score.bound||result.lines?.[0]?.bound);
+
+export async function analyzeClassifiablePosition(engine,fen,options){
+  let result=await engine.analyze(fen,options),attempts=1,searchLimits={depth:options.depth??12,movetime:options.movetime??300,nodes:options.nodes??30000};
+  // A new bestmove may have no completed exact iteration yet. Retry only that
+  // position; never convert its bound into a point score or reuse it forever.
+  for(const [i,fallback] of [PRESETS.standard,PRESETS.deep].entries()){
+    if(!incompleteScore(result))break;
+    if(options.signal?.aborted)throw new Error('Анализ остановлен.');
+    const retry={...options,depth:Math.max(fallback.depth,(options.depth??12)+4*(i+1)),movetime:Math.min(10000,Math.max(fallback.movetime,(options.movetime??300)*2**(i+1))),nodes:Math.max(fallback.nodes,(options.nodes??30000)*2**(i+1))};
+    result=await engine.analyze(fen,retry);attempts++;searchLimits={depth:retry.depth,movetime:retry.movetime,nodes:retry.nodes};
+  }
+  return {...result,scoreAttempts:attempts,searchLimits,...(incompleteScore(result)?{warning:'После ограниченного повторного поиска получена только граница оценки. Качество соседних ходов не определяется.'}:{})};
+}
 export class UciEngine {
   constructor({hash=32,threads=1}={}){this.hash=hash;this.threads=threads;this.child=null;this.waiters=[];this.current=null;this.buffer='';this.name='Stockfish 17.1';this.closed=false;}
   send(command){if(!this.child||this.closed)throw new Error('Движок остановлен.');this.child.stdin.write(command+'\n');}
@@ -89,8 +103,8 @@ export async function analyzeGame(game,store,{preset='quick',signal,onProgress=(
       const key=digest(JSON.stringify({build:'17.1-8e4d048',formula:'personal-v2',options,hash,initialFen:game.initialFen,history,fen}));
       let result=store.cache(key);
       if(result&&isPrematureDraw(result,fen))result=null;
-      if(result&&result.resultVersion!==RESULT_VERSION&&(result.score?.bound||result.lines?.[0]?.bound))result=null;
-      if(!result){result=await engine.analyze(fen,{...options,initialFen:game.initialFen,moves:history,signal});store.cachePut(key,result);}
+      if(result&&incompleteScore(result))result=null;
+      if(!result){result=await analyzeClassifiablePosition(engine,fen,{...options,initialFen:game.initialFen,moves:history,signal});store.cachePut(key,result);}
       positions.push(result);onProgress(i+1,game.moves.length+1);
       if(game.moves[i])history.push(game.moves[i].uci);
       await new Promise(resolve=>setImmediate(resolve));

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Chess } from 'chess.js';
-import { UciEngine, analyzeGame } from '../app/engine.mjs';
+import { UciEngine, analyzeGame, analyzeClassifiablePosition } from '../app/engine.mjs';
 import { normalizeGame } from '../app/domain.mjs';
 
 async function search(messages,{multiPV=1,fen=new Chess().fen()}={}){
@@ -57,7 +57,7 @@ test('an interrupted MultiPV rank change cannot duplicate a root move',async()=>
   assert.equal(r.score.value,40);assert.equal(r.lines.length,1);
 });
 
-test('reanalysis selectively refreshes legacy bounded cache entries',async()=>{
+test('reanalysis refreshes bounded cache entries even from the corrected parser',async()=>{
   const game=normalizeGame({pgn:'[White "tester"]\n[Black "other"]\n\n1. e4 *'},'tester');
   const oldInit=UciEngine.prototype.init,oldSend=UciEngine.prototype.send;
   let calls=0,writes=0,reads=0;
@@ -65,7 +65,29 @@ test('reanalysis selectively refreshes legacy bounded cache entries',async()=>{
   UciEngine.prototype.send=function(command){if(command.startsWith('go ')){
     calls++;this.line('info depth 8 score cp 20 pv e2e4');this.line('bestmove e2e4');
   }};
-  const store={cache:()=>++reads===1?{score:{kind:'cp',value:70},lines:[{bound:'lowerbound'}]}:{score:{kind:'cp',value:20},depth:8,bestMove:'e7e5',lines:[]},cachePut:()=>writes++};
+  const store={cache:()=>++reads===1?{resultVersion:'uci-exact-v1',score:{kind:'cp',value:70},lines:[{bound:'lowerbound'}]}:{score:{kind:'cp',value:20},depth:8,bestMove:'e7e5',lines:[]},cachePut:()=>writes++};
   try{const r=await analyzeGame(game,store);assert.equal(calls,1);assert.equal(writes,1);assert.equal(reads,2);assert.equal(r.moves[0].category,'best');}
   finally{UciEngine.prototype.init=oldInit;UciEngine.prototype.send=oldSend;}
+});
+
+test('a bestmove with only a bound gets a targeted deeper search with full history',async()=>{
+  const calls=[],options={depth:12,movetime:300,nodes:30000,initialFen:new Chess().fen(),moves:['e2e4'],signal:new AbortController().signal};
+  const engine={analyze:async(fen,limits)=>{calls.push(limits);return calls.length===1?{score:{kind:'cp',value:70,bound:'lowerbound'},lines:[]}:{score:{kind:'cp',value:50},lines:[]};}};
+  const result=await analyzeClassifiablePosition(engine,'test-fen',options);
+  assert.equal(result.scoreAttempts,2);assert.equal(result.score.bound,undefined);assert.equal(calls.length,2);
+  assert.ok(calls[1].movetime>=1500);assert.ok(calls[1].depth>=18);
+  assert.equal(calls[1].initialFen,options.initialFen);assert.equal(calls[1].moves,options.moves);assert.equal(calls[1].signal,options.signal);
+});
+
+test('exact and terminal scores need no retry; exhausted bounds stay unknown',async()=>{
+  let calls=0;const engine={analyze:async()=>{calls++;return {score:{kind:'cp',value:0},lines:[]};}};
+  const exact=await analyzeClassifiablePosition(engine,'test',{});assert.equal(calls,1);assert.equal(exact.scoreAttempts,1);
+  const bounded={analyze:async()=>({score:{kind:'cp',value:70,bound:'upperbound'},lines:[]})};
+  const result=await analyzeClassifiablePosition(bounded,'test',{});assert.equal(result.scoreAttempts,3);assert.equal(result.score.bound,'upperbound');assert.match(result.warning,/граница/);
+});
+
+test('cancellation between score attempts prevents another search',async()=>{
+  const controller=new AbortController();let calls=0;
+  const engine={analyze:async()=>{calls++;controller.abort();return {score:{kind:'cp',value:70,bound:'lowerbound'}};}};
+  await assert.rejects(analyzeClassifiablePosition(engine,'test',{signal:controller.signal}),/остановлен/);assert.equal(calls,1);
 });

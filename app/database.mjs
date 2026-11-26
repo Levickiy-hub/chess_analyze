@@ -22,6 +22,10 @@ export class Store {
       CREATE TABLE IF NOT EXISTS http_cache(url TEXT PRIMARY KEY,etag TEXT,last_modified TEXT,fetched_at TEXT NOT NULL,data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS puzzles(id TEXT PRIMARY KEY,game_id TEXT NOT NULL REFERENCES games(id),profile TEXT NOT NULL,ply INTEGER NOT NULL,data TEXT NOT NULL,due_at TEXT NOT NULL,interval_days REAL NOT NULL DEFAULT 0, UNIQUE(game_id,ply));
       CREATE TABLE IF NOT EXISTS attempts(id TEXT PRIMARY KEY,puzzle_id TEXT NOT NULL REFERENCES puzzles(id),created_at TEXT NOT NULL,correct INTEGER NOT NULL,data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS practice_runs(id TEXT PRIMARY KEY,puzzle_id TEXT NOT NULL REFERENCES puzzles(id),started_at TEXT NOT NULL,finished_at TEXT,data TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS practice_runs_puzzle ON practice_runs(puzzle_id,started_at);
+      CREATE TABLE IF NOT EXISTS learning_cycles(id TEXT PRIMARY KEY,profile TEXT NOT NULL REFERENCES profiles(username),started_at TEXT NOT NULL,data TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS learning_cycles_profile ON learning_cycles(profile,started_at);
       CREATE TABLE IF NOT EXISTS quarantine(id TEXT PRIMARY KEY,profile TEXT NOT NULL,error TEXT NOT NULL,data TEXT NOT NULL,created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS position_cache(key TEXT PRIMARY KEY,data TEXT NOT NULL,created_at TEXT NOT NULL);
       PRAGMA user_version=1;`);

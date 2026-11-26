@@ -27,17 +27,19 @@ test('HTTP API: import, filter, isolation, settings validation, security',async(
   const puzzle={id:'p1',fen:'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',color:'w',solution:['e2e4','e7e5','g1f3','b8c6'],alternatives:[],motifs:[]};
   app.store.db.prepare('INSERT INTO puzzles(id,game_id,profile,ply,data,due_at) VALUES(?,?,?,?,?,?)').run('p1',list.games[0].id,'tester',1,JSON.stringify(puzzle),new Date().toISOString());
   const puzzles=(await call('/api/puzzles?profile=tester')).body;assert.equal(puzzles.puzzles[0].solution,undefined);
-  assert.equal((await call('/api/puzzles/p1/attempt?profile=tester','POST',{moves:['d2d4']})).body.correct,false);
-  const first=(await call('/api/puzzles/p1/attempt?profile=tester','POST',{moves:['e2e4']})).body;assert.equal(first.correct,true);assert.equal(first.complete,false);assert.equal(first.reply,'e7e5');
-  const final=(await call('/api/puzzles/p1/attempt?profile=tester','POST',{moves:['e2e4','e7e5','g1f3']})).body;assert.equal(final.complete,true);
-  assert.equal((await call('/api/puzzles?profile=tester')).body.attempts.correct,1);
+  const run=(await call('/api/puzzles/p1/start?profile=tester','POST',{})).body.runId;
+  assert.equal((await call('/api/puzzles/p1/attempt?profile=tester','POST',{runId:run,moves:['d2d4']})).body.correct,false);
+  const first=(await call('/api/puzzles/p1/attempt?profile=tester','POST',{runId:run,moves:['e2e4']})).body;assert.equal(first.correct,true);assert.equal(first.complete,false);assert.equal(first.reply,'e7e5');
+  const final=(await call('/api/puzzles/p1/attempt?profile=tester','POST',{runId:run,moves:['e2e4','e7e5','g1f3']})).body;assert.equal(final.complete,true);assert.equal(final.clean,false);
+  assert.equal((await call('/api/puzzles?profile=tester')).body.attempts.correct,0);
   const scheduled=app.store.db.prepare('SELECT interval_days,due_at FROM puzzles WHERE id=?').get('p1');
-  await call('/api/puzzles/p1/attempt?profile=tester','POST',{moves:['e2e4','e7e5','g1f3']});
+  await call('/api/puzzles/p1/attempt?profile=tester','POST',{runId:run,moves:['e2e4','e7e5','g1f3']});
   assert.deepEqual(app.store.db.prepare('SELECT interval_days,due_at FROM puzzles WHERE id=?').get('p1'),scheduled);
-  const repeated=(await call('/api/puzzles?profile=tester')).body;assert.equal(repeated.attempts.solved,1);assert.equal(repeated.attempts.correct,2);assert.equal(repeated.total,1);
-  assert.equal((await call('/api/puzzles/p1/attempt?profile=tester','POST',{moves:['e2e4','e7e5']})).status,400);
-  assert.equal((await call('/api/puzzles/p1/hint?profile=tester','POST',{moves:['e2e4','e7e5','g1f3','b8c6']})).status,400);
-  assert.equal((await call('/api/puzzles/p1/attempt?profile=another','POST',{moves:['e2e4']})).status,400);
+  const repeated=(await call('/api/puzzles?profile=tester')).body;assert.equal(repeated.attempts.solved,0);assert.equal(repeated.attempts.n,1);assert.equal(repeated.total,1);
+  const nextRun=(await call('/api/puzzles/p1/start?profile=tester','POST',{})).body.runId;
+  assert.equal((await call('/api/puzzles/p1/attempt?profile=tester','POST',{runId:nextRun,moves:['e2e4','e7e5','g1f3']})).status,400);
+  assert.equal((await call('/api/puzzles/p1/attempt?profile=another','POST',{runId:nextRun,moves:['e2e4']})).status,400);
+  assert.equal((await call('/api/puzzles/p1/hint?profile=another','POST',{runId:nextRun})).status,400);
  }finally{await app.close();}
 },{timeout:15000});
 
