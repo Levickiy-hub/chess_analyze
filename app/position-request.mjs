@@ -1,8 +1,9 @@
+import { setupPosition } from './setup-position.mjs';
 import { Chess } from 'chess.js';
 
 export function positionRequest(input){
   if(typeof input.fen!=='string')throw new Error('Нужна FEN позиции.');
-  const target=new Chess(input.fen);
+  const target=new Chess(setupPosition(input.fen));
   if(input.initialFen===undefined){if(input.moves!==undefined)throw new Error('Для истории ходов нужна начальная FEN.');return {fen:target.fen()};}
   if(typeof input.initialFen!=='string'||!Array.isArray(input.moves)||input.moves.length>2048)throw new Error('Некорректная история позиции.');
   const board=new Chess(input.initialFen),initialFen=board.fen();

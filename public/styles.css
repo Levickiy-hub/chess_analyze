@@ -1282,6 +1282,7 @@ td .secondary-text {
 }
 
 .app-footer a {
+    margin-left: auto;
     color: var(--muted)
 }
 
@@ -1682,6 +1683,50 @@ table {
 
 .move-list {grid-template-columns: repeat(2,minmax(0,1fr))}
 .move-button {min-width: 0}
-.move-button.has-book {flex-wrap: wrap}
-.move-button.has-book small {flex-basis: 100%;justify-content: flex-start}
 .move-button .pill.book {white-space: normal;text-align: left}
+
+.square.hint-square {
+    box-shadow: inset 0 0 0 5px #ffd45a;
+}
+.square.hint-square::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #ffd45a38;
+    pointer-events: none;
+}
+
+#opening-study-line {width: 100%;min-width: 0;max-width: 100%}
+#opening-study-workspace .review > div {min-width: 0}
+#opening-study-workspace .branch-moves {max-height: 260px;overflow-y: auto;margin: 16px 0}
+#opening-study-workspace details {margin-top: 16px}
+#opening-study-search {align-items: end}
+
+.study-engine {margin: 18px 0;padding: 14px;border: 1px solid var(--line);border-radius: 10px}
+.study-engine h3 {margin: 0}
+.study-engine .card-head {flex-wrap: wrap;gap: 8px}
+.study-eval {font-size: 24px}
+.study-engine .variation {overflow-wrap: anywhere}
+
+.quality-book {--quality-color: #88baff}
+.quality-unknown {--quality-color: #9ba8b6}
+.move-quality-icon {display: inline-grid;vertical-align: middle;flex-shrink: 0}
+
+.habit-card details {margin-top: 12px}
+.habit-card .section-actions {margin: 12px 0}
+.habit-card small {color: var(--muted)}
+
+.setup-palette {display: flex;flex-wrap: wrap;gap: 6px;margin: 14px 0}
+.palette-piece {font-family: Georgia,serif;font-size: 36px;line-height: 1;width: 48px;height: 48px;border: 1px solid var(--line);border-radius: 8px;background: #758b9a;cursor: grab}
+.palette-piece.white-piece {color: #fff;text-shadow: 0 1px 2px #000}
+.palette-piece.black-piece {color: #111}
+.palette-piece.active {outline: 3px solid var(--accent)}
+.setup-board .square {cursor: pointer}
+#position-lab .review > div {min-width: 0}
+#lab-fen-form {margin: 18px 0}
+#lab-fen {width: 100%;font-family: monospace;overflow-wrap: anywhere}
+#lab-error {color: var(--yellow)}
+#lab-book p {overflow-wrap: anywhere}
+#lab-engine {margin: 0}
+
+.setup-board .square,.setup-palette .palette-piece {touch-action: none;user-select: none;-webkit-user-select: none}

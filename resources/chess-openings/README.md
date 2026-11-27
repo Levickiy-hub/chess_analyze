@@ -21,3 +21,9 @@ Rebuild after an intentional source update:
 The application loads the derived index locally on the first game review request.
 No network request or engine search is required. Book membership is returned
 separately from the engine analysis and never changes quality or accuracy.
+
+The generated index also includes `catalogue` (line metadata and source PGN)
+and `positions` (normalized FEN keys mapped to line IDs and halfmove offsets).
+The custom position explorer distinguishes a named endpoint from a position
+merely occurring inside a named line; legal outgoing book edges are returned
+separately from Stockfish results.

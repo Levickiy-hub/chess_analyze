@@ -1,3 +1,7 @@
+import { positionHistory } from './position-history.mjs';
+import { openingPosition } from './opening-position.mjs';
+import { habitReport, startHabit, habitTrainingReport, habitEntries } from './habits.mjs';
+import { openingStudy } from './opening-study.mjs';
 import { openingTheory } from './opening-theory.mjs';
 import { startLearning, learningReport } from './learning.mjs';
 import { practiceAction, practiceDashboard, randomPracticePuzzle } from './practice.mjs';
@@ -50,6 +54,18 @@ export function createApplication({filename=path.join(ROOT,'data','chess.sqlite'
       }
       const profile=query.profile??store.profiles()[0]?.username;
       if(route.startsWith('/api/')&&!['/api/position'].includes(route)&&(!profile||!store.profile(profile)))throw new Error('Добавьте шахматный профиль.');
+      if(route==='/api/opening-position'&&req.method==='POST'){const input=await body(req);const result=openingPosition(input.fen);result.personal=positionHistory(store.games(profile),result.fen);json(res,200,result);return;}
+      if(route==='/api/opening-study'&&req.method==='GET'){
+        json(res,200,openingStudy(selectGames(store,profile,query).games,{q:query.q,line:query.line??null,order:query.order}));return;
+      }
+      if(route==='/api/habits'&&req.method==='GET'){json(res,200,habitReport(selectGames(store,profile,query),query));return;}
+      if(route==='/api/habits/training'&&req.method==='GET'){json(res,200,habitTrainingReport(store,profile));return;}
+      const habitRefill=/^\/api\/habits\/([^/]+)\/refill$/.exec(route);
+      if(habitRefill&&req.method==='POST'){json(res,201,runner.enqueuePuzzles(profile,{mode:'habit',trainingId:habitRefill[1]}));return;}
+      if(route==='/api/habits/start'&&req.method==='POST'){
+        const input=await body(req);if(typeof input.key!=='string'||!input.filter||typeof input.filter!=='object'||Array.isArray(input.filter))throw new Error('Выберите вывод тренера.');
+        const training=startHabit(store,profile,input.key,input.filter),job=runner.enqueuePuzzles(profile,{mode:'habit',trainingId:training.id});json(res,201,{trainingId:training.id,job});return;
+      }
       if(route==='/api/coach'&&req.method==='GET'){
         store.refresh();
         const key='coach:'+store.revision+':'+url.searchParams.toString();
@@ -79,7 +95,7 @@ export function createApplication({filename=path.join(ROOT,'data','chess.sqlite'
         const game=store.game(decodeURIComponent(gameMatch[1]));if(!game||game.profile!==profile){json(res,404,{error:'Партия не найдена.'});return;}
         if(gameMatch[2]==='pgn'){res.writeHead(200,{'Content-Type':'application/x-chess-pgn; charset=utf-8','Content-Disposition':'attachment; filename="game.pgn"'});res.end(game.pgn);}
         else if(gameMatch[2]==='versions')json(res,200,store.db.prepare('SELECT id,source,preset,created_at FROM analyses WHERE game_id=? ORDER BY created_at DESC').all(game.id));
-        else {delete game.raw;game.theory=openingTheory(game);json(res,200,game);}return;
+        else {delete game.raw;game.theory=openingTheory(game);const insights=habitReport(selectGames(store,profile,{format:game.timeClass}),{format:game.timeClass});game.habitTags=insights.priorities.flatMap(p=>habitEntries([game],store.analyses(profile),p.kind,p.format,p.preset).filter(e=>e.matches).map(e=>({ply:e.move.ply,title:p.title,key:p.key,evidence:e.evidence,format:p.format})));json(res,200,game);}return;
       }
       if(route==='/api/import'&&req.method==='POST'){
         const input=await body(req);if(typeof input.pgn!=='string')throw new Error('Нужен текст PGN.');const pgns=input.pgn.split(/\n\s*\n(?=\[Event )/).filter(x=>x.trim());let imported=0;const errors=[];

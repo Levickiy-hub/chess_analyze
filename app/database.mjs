@@ -26,6 +26,8 @@ export class Store {
       CREATE INDEX IF NOT EXISTS practice_runs_puzzle ON practice_runs(puzzle_id,started_at);
       CREATE TABLE IF NOT EXISTS learning_cycles(id TEXT PRIMARY KEY,profile TEXT NOT NULL REFERENCES profiles(username),started_at TEXT NOT NULL,data TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS learning_cycles_profile ON learning_cycles(profile,started_at);
+      CREATE TABLE IF NOT EXISTS habit_training(id TEXT PRIMARY KEY,profile TEXT NOT NULL REFERENCES profiles(username),started_at TEXT NOT NULL,data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS habit_puzzles(training_id TEXT NOT NULL REFERENCES habit_training(id),puzzle_id TEXT NOT NULL REFERENCES puzzles(id),PRIMARY KEY(training_id,puzzle_id));
       CREATE TABLE IF NOT EXISTS quarantine(id TEXT PRIMARY KEY,profile TEXT NOT NULL,error TEXT NOT NULL,data TEXT NOT NULL,created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS position_cache(key TEXT PRIMARY KEY,data TEXT NOT NULL,created_at TEXT NOT NULL);
       PRAGMA user_version=1;`);

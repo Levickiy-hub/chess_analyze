@@ -1,4 +1,5 @@
 const controllers=new WeakMap();
+export function cancelBoardDrag(container){controllers.get(container)?.cancel();}
 
 export function dropMoves(Chess,fen,from,to){
   if(from===to||!from||!to)return [];
@@ -29,7 +30,7 @@ export function bindBoardDrag(container,options){
     if(!s.dragging){
       s.dragging=true;container.setPointerCapture?.(s.id);s.source.classList.add('drag-source');container.classList.add('is-dragging');
       const rect=s.source.getBoundingClientRect(),style=win.getComputedStyle(s.source),ghost=doc.createElement('span');
-      ghost.className='drag-piece';ghost.setAttribute('aria-hidden','true');ghost.textContent=s.source.querySelector('.piece-token').textContent;
+      ghost.className='drag-piece';ghost.setAttribute('aria-hidden','true');ghost.textContent=s.source.querySelector('.piece-token')?.textContent??s.source.textContent;
       Object.assign(ghost.style,{width:rect.width+'px',height:rect.height+'px',fontSize:style.fontSize,fontFamily:style.fontFamily,color:style.color,textShadow:style.textShadow});
       doc.body.append(ghost);s.ghost=ghost;s.size=rect.width;
       for(const cell of container.querySelectorAll('[data-square]'))if(s.legal.has(cell.dataset.square))cell.classList.add('drag-legal');
@@ -50,13 +51,20 @@ export function bindBoardDrag(container,options){
   }
   container.addEventListener('pointerdown',event=>{
     control.suppressUntil=0;
-    const {interactive,Chess,fen,onMove}=control.options;
+    const {interactive,Chess,fen,onMove,dragSource}=control.options;
     if(!interactive||!onMove||control.active||event.button!==0||event.isPrimary===false)return;
-    const source=event.target.closest('[data-square]');if(!source||!container.contains(source))return;
-    const board=new Chess(fen),from=source.dataset.square,piece=board.get(from);
-    if(!piece||piece.color!==board.turn())return;
-    const moves=board.moves({square:from,verbose:true});if(!moves.length)return;
-    control.active={id:event.pointerId,source,from,fen,x:event.clientX,y:event.clientY,dragging:false,legal:new Set(moves.map(m=>m.to))};
+    const source=event.target.closest(dragSource?'[data-square],[data-palette]':'[data-square]');if(!source||!container.contains(source))return;
+    let from,legal;
+    if(dragSource){
+      const info=dragSource(source);if(!info)return;from=info.from;
+      legal=new Set([...container.querySelectorAll('[data-square]')].map(cell=>cell.dataset.square));
+    }else{
+      const board=new Chess(fen);from=source.dataset.square;const piece=board.get(from);
+      if(!piece||piece.color!==board.turn())return;
+      const moves=board.moves({square:from,verbose:true});if(!moves.length)return;
+      legal=new Set(moves.map(m=>m.to));
+    }
+    control.active={id:event.pointerId,source,from,fen,x:event.clientX,y:event.clientY,dragging:false,legal};
     doc.addEventListener('pointermove',move,{capture:true,passive:false});doc.addEventListener('pointerup',up,true);doc.addEventListener('pointercancel',cancel,true);doc.addEventListener('keydown',key,true);win.addEventListener('blur',cancel);
   });
   container.addEventListener('click',event=>{if(event.detail!==0&&Date.now()<control.suppressUntil){control.suppressUntil=0;event.preventDefault();event.stopImmediatePropagation();}},true);

@@ -1,3 +1,4 @@
+import { habitReport } from './habits.mjs';
 import { Chess } from 'chess.js';
 import { PHASES } from './analytics.mjs';
 
@@ -63,7 +64,7 @@ export function coachReport(selection, filter = {}) {
   }),all.length,'В примерах проверьте все взятия соперника после своего хода и оцените компенсацию. Ответное взятие само по себе не доказывает причину ошибки.','Какое ответное взятие нужно было рассчитать?');
   patterns.sort((a,b)=>(a.id==='mate'?-1:b.id==='mate'?1:b.count-a.count));
   const examples = errors.slice().sort((a,b)=>(b.move.probabilityLoss??0)-(a.move.probabilityLoss??0)).slice(0,12).map(x=>({...explainMove(x.game,x.analysis,x.move.ply),opponent:x.game.opponent,date:x.game.end,format:x.game.timeClass}));
-  const priorities = patterns.slice(0,3);
+  const insights=habitReport(selection,filter),priorities=insights.priorities;
   const plan = Array.from({length:7},(_,i)=>{
     const focus = priorities.length ? priorities[Math.floor(i/2)%priorities.length] : null;
     return {day:i+1,title:i===6?'Подведите итог недели':i%2?'Повторите без подсказки':'Разберите свои ошибки',minutes:15,
@@ -85,7 +86,7 @@ export function coachReport(selection, filter = {}) {
   if (new Set(records.map(x=>x.game.timeClass)).size>1) warnings.push('Выбрано несколько форматов. Для более точного плана выберите один формат в фильтрах.');
   if (filter.category || filter.phase || filter.motif) warnings.push('Фильтр ходов ограничивает знаменатель частоты ошибок; это не частота по всем ходам партий.');
   if (!patterns.length) warnings.push(`Повторяющийся паттерн показывается от трёх ошибок в трёх разных партиях и ${min} оценённых ходов. Данных пока недостаточно либо такой повторяемости нет.`);
-  const report={version:'coach-v1',profile:filter.profile??games[0]?.profile??null,filter,coverage:{...counts,total:games.length,used:records.length,includeRecovered},evaluated:all.length,errors:errors.length,patterns,examples,plan,progress,warnings};
+  const report={version:'coach-v2',insights,profile:filter.profile??games[0]?.profile??null,filter,coverage:{...counts,total:games.length,used:records.length,includeRecovered},evaluated:all.length,errors:errors.length,patterns,examples,plan,progress,warnings};
   return {...report,exportText:exportCoach(report)};
 }
 
@@ -93,7 +94,7 @@ function exportCoach(r) {
   return ['Помоги разобрать мою шахматную игру и предложи упражнения. Используй только приведённые факты; не придумывай причины, варианты и статистику. При нехватке данных скажи об этом.',
     `Профиль: ${r.profile??'нет партий'}. Фильтры: ${JSON.stringify(r.filter)}.`,
     `Партий: ${r.coverage.total}; с новым анализом: ${r.coverage.verified}; с историческим: ${r.coverage.recovered}; использовано: ${r.coverage.used}. Оценённых своих ходов: ${r.evaluated}; ошибок и зевков: ${r.errors}.`,
-    ...r.warnings,...r.patterns.map(p=>`${p.title}: ${p.count} ошибок в ${p.games} партиях; ${p.denominator} оценённых ходов в соответствующей выборке. ${p.action}`),
+    ...r.warnings,...(r.insights?.priorities??[]).map(p=>`${p.title}: ${p.errors} ошибок в ${p.affectedGames} партиях из ${p.evaluated} подходящих ходов (${p.format}, ${p.preset}). Гипотеза: ${p.hypothesis} Действие: ${p.action}`),...r.patterns.map(p=>`${p.title}: ${p.count} ошибок в ${p.games} партиях; ${p.denominator} оценённых ходов в соответствующей выборке. ${p.action}`),
     ...r.examples.slice(0,6).map(e=>JSON.stringify({gameId:e.gameId,ply:e.ply,fen:e.fen,played:e.san,best:e.best,pvSAN:e.variation,before:e.before,after:e.after,depth:e.depth,source:e.source,facts:e.observations,note:e.note})),
     'Составь три приоритета на неделю. SAN-варианты выше взяты из сохранённого поиска; дополнительные варианты требуют проверки движком.'].join('\n\n');
 }

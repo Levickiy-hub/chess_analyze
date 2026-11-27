@@ -2,6 +2,7 @@ import { annotateSpecialMoves } from './special-moves.mjs';
 import { Chess } from 'chess.js';
 import { createHash } from 'node:crypto';
 import { identifyOpening } from './openings.mjs';
+import { opponentKind } from './opponent-kind.mjs';
 
 export const FORMULA_VERSION = 'personal-v3';
 export const NORMALIZATION_VERSION = 2;
@@ -35,6 +36,7 @@ function clockMoves(moves,control,initialFen) {
 }
 // Refresh cheap derived fields on read; raw PGN and engine results stay untouched.
 export function upgradeSavedGame(game) {
+  const kind=opponentKind(game);game={...game,opponentType:kind.type,opponentTypeReason:kind.reason};
   if(game.normalizationVersion===NORMALIZATION_VERSION)return game;
   const h=game.headers??{},raw=game.raw??{},date=h.EndDate??h.UTCDate??h.Date,endTime=h.EndTime??h.UTCTime;
   const end=Number.isFinite(raw.end_time)?raw.end_time:parseDate(date,endTime??'00:00:00');
