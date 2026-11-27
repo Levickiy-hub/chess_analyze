@@ -61,7 +61,7 @@ test('browsing clamps position and cannot change memorization progress',()=>{
 });
 
 test('study HTTP report obeys profile selection and returns only legal named catalogue IDs',async()=>{
-  const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});
+  const app=createApplication({filename:':memory:',runJobs:false});
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   try{
     app.store.saveProfile('tester');app.store.saveProfile('other');app.store.importGame({pgn:game.pgn},'tester');

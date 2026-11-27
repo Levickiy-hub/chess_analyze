@@ -39,7 +39,7 @@ test('theory UI preserves separate quality and escapes source text',()=>{
 });
 
 test('game HTTP response includes theory for existing saved games and enforces profile isolation',async()=>{
-  const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});
+  const app=createApplication({filename:':memory:',runJobs:false});
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   try{
     app.store.saveProfile('tester');app.store.saveProfile('other');

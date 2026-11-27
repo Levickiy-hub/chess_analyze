@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Chess } from 'chess.js';
-import { normalizeGame,whiteScore,moveQuality,recoverLegacy,boardFeatures,mean,expectation } from '../app/domain.mjs';
+import { normalizeGame,whiteScore,moveQuality,finishAnalysis,boardFeatures,mean,expectation } from '../app/domain.mjs';
 import { Store } from '../app/database.mjs';
 import { analytics,selectGames,localTime } from '../app/analytics.mjs';
 import { JobRunner } from '../app/jobs.mjs';
@@ -39,7 +39,7 @@ test('phase depends on material rather than game fraction',()=>{
 });
 test('reimport is idempotent; result and player metrics remain isolated',()=>{
  const {s,game}=fixture();assert.equal(s.importGame(raw,'tester').inserted,false);assert.equal(s.games('tester').length,1);
- const legacy={analysis:game.moves.map((m,i)=>({evaluation:'cp '+(i%2?-20:20),fen:m.fen,bestMove:m.uci}))};s.putAnalysis(game.id,recoverLegacy(game,legacy));
+ const positions=game.moves.map(m=>({score:{kind:'cp',value:20,pov:'white'},bestMove:m.uci,depth:null,lines:[]}));s.putAnalysis(game.id,finishAnalysis(game,positions,{source:'recovered',preset:'unknown'}));
  const r=analytics(s,'tester');assert.equal(r.summary.games,1);assert.equal(r.summary.wins,1);assert.equal(r.summary.evaluated,1);assert.equal(r.summary.acpl,0);assert.equal(r.coverage.recovered,1);assert.equal(analytics(s,'tester',{includeRecovered:'false'}).summary.acpl,null);
  s.saveProfile('another');assert.equal(analytics(s,'another').sample,0);s.close();
 });

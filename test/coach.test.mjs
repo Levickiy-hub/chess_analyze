@@ -69,7 +69,7 @@ test('coach UI escapes imported names and commentary',()=>{
 });
 
 test('coach HTTP endpoints isolate profiles, validate plies and create no jobs',async()=>{
-  const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});
+  const app=createApplication({filename:':memory:',runJobs:false});
   const [game]=seed(app.store);app.store.saveProfile('another');
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   const base='http://127.0.0.1:'+app.server.address().port;

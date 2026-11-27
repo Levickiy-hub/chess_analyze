@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createApplication } from '../app/server.mjs';
 
 test('learning HTTP flow isolates profiles, tracks assistance and hides future solutions',async()=>{
-  const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});
+  const app=createApplication({filename:':memory:',runJobs:false});
   app.runner.enqueuePuzzles=()=>({id:'preparation-job',status:'queued'});
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   const root='http://127.0.0.1:'+app.server.address().port;

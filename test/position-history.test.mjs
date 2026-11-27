@@ -34,7 +34,7 @@ test('empty history is explicit and match preview is bounded without truncating 
 });
 
 test('lookup counts only games belonging to the selected profile',async()=>{
-  const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});app.store.saveProfile('tester');app.store.saveProfile('other');
+  const app=createApplication({filename:':memory:',runJobs:false});app.store.saveProfile('tester');app.store.saveProfile('other');
   for(const profile of ['tester','other'])app.store.importGame({uuid:profile,pgn:`[White "${profile}"]\n[Black "opponent"]\n\n1. Nf3 Nf6 2. Ng1 Ng8 *`},profile);
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   try{

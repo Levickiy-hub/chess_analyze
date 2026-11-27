@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createApplication } from '../app/server.mjs';
 
 test('HTTP API: import, filter, isolation, settings validation, security',async()=>{
- const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});
+ const app=createApplication({filename:':memory:',runJobs:false});
  await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const url='http://127.0.0.1:'+app.server.address().port;
  const call=async(route,method='GET',data,headers={})=>{const r=await fetch(url+route,{method,headers:{...(data?{'Content-Type':'application/json'}:{}),...headers},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(5000)});return {status:r.status,body:await r.json()};};
  try{
@@ -44,7 +44,7 @@ test('HTTP API: import, filter, isolation, settings validation, security',async(
 },{timeout:15000});
 
 test('game header sorts are applied globally before HTTP pagination',async()=>{
- const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});
+ const app=createApplication({filename:':memory:',runJobs:false});
  app.store.saveProfile('sort_tester');
  for(let i=0;i<30;i++){
   const pgn='[White "sort_tester"]\n[Black "opponent"]\n\n1. e4 e5 *';

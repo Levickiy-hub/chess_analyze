@@ -25,8 +25,8 @@ const MIME={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8',
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
 async function body(req){let text='',size=0;for await(const chunk of req){size+=chunk.length;if(size>8*1024*1024)throw new Error('Размер запроса превышает 8 MB.');text+=chunk;}try{return JSON.parse(text||'{}');}catch{throw new Error('Некорректный JSON.');}}
 
-export function createApplication({filename=path.join(ROOT,'data','chess.sqlite'),bootstrap=true,runJobs=true}={}){
-  const store=new Store(filename);if(bootstrap)store.bootstrap(ROOT);const runner=new JobRunner(store);if(runJobs)runner.start();
+export function createApplication({filename=path.join(ROOT,'data','chess.sqlite'),runJobs=true}={}){
+  const store=new Store(filename);const runner=new JobRunner(store);if(runJobs)runner.start();
   let reportCache=new Map(),positionBusy=false,positionEngine=null;
   const server=http.createServer(async(req,res)=>{
     res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');

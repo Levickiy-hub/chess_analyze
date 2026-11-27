@@ -197,11 +197,3 @@ export function sustainedAdvantage(moves,color,threshold=200) {
     if(consecutive>=2)return true;
   }return false;
 }
-
-export function recoverLegacy(game,legacy) {
-  const positions=legacy.analysis.map(m=>{const match=/^(cp|mate) (-?\d+)/.exec(m.evaluation??'');return {score:match?whiteScore({type:match[1],value:Number(match[2])},m.fen):null,bestMove:m.bestMove,depth:null,lines:[]};});
-  const board=new Chess(game.finalFen);
-  if(board.isCheckmate())positions.push({score:{kind:'mate',value:0,pov:'white',winner:board.turn()==='w'?'b':'w'},bestMove:null,lines:[]});
-  else if(board.isDraw())positions.push({score:{kind:'cp',value:0,pov:'white'},bestMove:null,lines:[]});
-  return finishAnalysis(game,positions,{source:'recovered',engine:'Stockfish, исторический запуск',preset:'unknown',warning:'POV и формулы пересчитаны. Глубина, параметры и PV исторического анализа неизвестны; финальная оценка может отсутствовать.'});
-}

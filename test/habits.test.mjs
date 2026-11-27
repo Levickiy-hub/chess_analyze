@@ -97,7 +97,7 @@ test('training freezes baseline, reuses matching puzzles, isolates profiles and 
 });
 
 test('habit HTTP flow recomputes conclusions, keeps task solutions private and rejects cross-profile refill',async()=>{
-  const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});
+  const app=createApplication({filename:':memory:',runJobs:false});
   app.store.saveProfile('tester');app.store.saveProfile('other');for(let i=0;i<5;i++)fixture(app.store,'api-'+i);
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const root='http://127.0.0.1:'+app.server.address().port;
   const call=async(path,profile='tester',body)=>{const r=await fetch(root+path+'?profile='+profile,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};};

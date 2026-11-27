@@ -48,7 +48,7 @@ test('position experiments retain history and distinguish alternate branches at 
 });
 
 test('HTTP lookup validates FEN and does not create games or engine jobs',async()=>{
-  const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false});app.store.saveProfile('tester');
+  const app=createApplication({filename:':memory:',runJobs:false});app.store.saveProfile('tester');
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   try{
     const root='http://127.0.0.1:'+app.server.address().port;

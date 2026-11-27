@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { normalizeGame, recoverLegacy, upgradeSavedGame, upgradeSavedAnalysis } from './domain.mjs';
+import { normalizeGame, upgradeSavedGame, upgradeSavedAnalysis } from './domain.mjs';
 
 export const DEFAULT_SETTINGS={timezone:'Europe/Moscow',sessionGap:45,minSample:5,preset:'quick',autoAnalyze:false,includeRecovered:true,hash:32};
 export class Store {
@@ -64,21 +64,5 @@ export class Store {
   updateJob(id,status,data){this.db.prepare('UPDATE jobs SET status=?,updated_at=?,data=? WHERE id=?').run(status,new Date().toISOString(),JSON.stringify(data),id);return this.job(id);}
   cache(key){const row=this.db.prepare('SELECT data FROM position_cache WHERE key=?').get(key);return row?JSON.parse(row.data):null;}
   cachePut(key,data){this.db.prepare('INSERT OR REPLACE INTO position_cache VALUES(?,?,?)').run(key,JSON.stringify(data),new Date().toISOString());}
-  bootstrap(root){
-    if(this.db.prepare("SELECT value FROM metadata WHERE key='bootstrap'").get())return;
-    let games=0,recovered=0;
-    const base=path.join(root,'games');
-    if(fs.existsSync(base))for(const entry of fs.readdirSync(base,{withFileTypes:true})){
-      if(!entry.isDirectory())continue;this.saveProfile(entry.name,{local:true});
-      for(const file of fs.readdirSync(path.join(base,entry.name)).filter(f=>/^\d{4}-\d{2}\.json$/.test(f))){
-        const raw=JSON.parse(fs.readFileSync(path.join(base,entry.name,file),'utf8'));
-        const legacyPath=path.join(root,'analysis',entry.name,file.slice(0,-5),'analysis.json');
-        const legacy=fs.existsSync(legacyPath)?new Map(JSON.parse(fs.readFileSync(legacyPath,'utf8')).map(g=>[g.pgn,g])):new Map();
-        for(const data of raw){const result=this.importGame(data,entry.name);if(result.error)continue;games++;if(legacy.has(data.pgn)){this.putAnalysis(result.game.id,recoverLegacy(result.game,legacy.get(data.pgn)));recovered++;}}
-      }
-    }
-    this.db.prepare("INSERT INTO metadata VALUES('bootstrap',?)").run(JSON.stringify({games,recovered,at:new Date().toISOString()}));
-    console.log(`Импортировано локально: ${games} партий; восстановлено оценок: ${recovered}. Исходные файлы сохранены.`);
-  }
   close(){this.db.close();}
 }

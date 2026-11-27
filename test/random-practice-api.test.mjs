@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createApplication } from '../app/server.mjs';
 
 test('random practice API picks private tasks, preserves schedules and passes refill mode to the queue',async()=>{
-  const app=createApplication({filename:':memory:',bootstrap:false,runJobs:false}),modes=[];
+  const app=createApplication({filename:':memory:',runJobs:false}),modes=[];
   app.runner.enqueuePuzzles=(profile,options={})=>{modes.push(options.mode??'cycle');return {id:'job',profile,mode:options.mode};};
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
   const root='http://127.0.0.1:'+app.server.address().port;
